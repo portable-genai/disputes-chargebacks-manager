@@ -1,0 +1,51 @@
+# Disputes and Chargebacks Manager (F2) policy packs: the CLIENT-owned numbers, as data.
+#
+# Reason-code eligibility windows / evidence / response deadlines, and the refund-abuse
+# thresholds, live HERE rather than as module constants so a deployment overrides them without a
+# code edit. `config.load_policy` reads this file; `tests/unit/test_policy_packs.py` validates the
+# shape and drift-guards it against `domain/policy_defaults.py`. Every value is illustrative and
+# synthetic. Amounts are integer MINOR units.
+
+reason_code_packs:
+  - track: card_scheme
+    scheme: card-scheme-illustrative
+    rules:
+      - code: "10.4"
+        description: Other fraud, card-absent environment
+        filing_window_days: 120
+        response_deadline_days: 20
+        evidence_required: [transaction_receipt, avs_result]
+      - code: "13.1"
+        description: Merchandise or services not received
+        filing_window_days: 120
+        response_deadline_days: 30
+        evidence_required: [proof_of_delivery]
+      - code: "13.3"
+        description: Not as described or defective
+        filing_window_days: 120
+        response_deadline_days: 30
+        evidence_required: [item_description, return_policy]
+  - track: retail
+    scheme: retail-buyer-dispute-illustrative
+    rules:
+      - code: R-REFUND
+        description: Buyer refund request
+        filing_window_days: 30
+        response_deadline_days: 14
+        evidence_required: [order_record]
+      - code: R-INR
+        description: Item not received
+        filing_window_days: 45
+        response_deadline_days: 14
+        evidence_required: [tracking_record]
+
+abuse_policy:
+  velocity_count_90d: 4
+  high_amount_minor: 50000
+  high_refund_total_minor: 200000
+  velocity_points: 2
+  amount_points: 1
+  refund_total_points: 2
+  prior_abuse_points: 3
+  review_at: 3
+  deny_at: 5

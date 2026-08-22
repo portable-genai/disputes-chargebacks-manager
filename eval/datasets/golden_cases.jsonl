@@ -1,0 +1,60 @@
+# Golden case set for the Disputes and Chargebacks Manager (F2). Obviously fictional data only.
+#
+# Each line is ONE labelled scenario keyed by `kind`. The `expected_*` field on every line is the
+# INDEPENDENT ORACLE: it is hand-declared from the client policy (filing windows, abuse bands,
+# intended lifecycle), NOT read back from the pipeline. A metric scores the engine's answer
+# AGAINST that label, so a wrong engine turns the metric red. The metrics and their homes:
+#
+#   kind=eligibility -> eligibility_accuracy : engine verdict vs expected_eligible
+#   kind=abuse       -> abuse_accuracy       : engine outcome vs expected_outcome
+#   kind=intake      -> intake_accuracy      : model classification vs expected_category
+#   kind=lifecycle   -> lifecycle_trace      : state-machine replay vs expected_states
+#   kind=grounded    -> groundedness         : every figure in the drafted pack is engine-sourced
+#   kind=pii         -> pii_safety           : no raw identifier survives redact-before-audit
+#
+# `run_eval.py` also proves every one of these metrics can go RED (agent_eval_kit) before scoring.
+#
+# --- eligibility: card-scheme window 120d (10.4/13.1/13.3); retail 30d (R-REFUND) / 45d (R-INR);
+#     an unknown reason code and a negative filing age both fail closed (ineligible). ---
+{"id": "e1", "kind": "eligibility", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 42000, "currency": "SGD", "transaction_date": "2025-05-01", "intake_date": "2025-05-10", "as_of": "2025-06-01", "expected_eligible": true}
+{"id": "e2", "kind": "eligibility", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 9900, "currency": "SGD", "transaction_date": "2024-01-01", "intake_date": "2025-05-10", "as_of": "2025-06-01", "expected_eligible": false}
+{"id": "e3", "kind": "eligibility", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 1500, "currency": "SGD", "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "as_of": "2025-06-01", "expected_eligible": true}
+{"id": "e4", "kind": "eligibility", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 3200, "currency": "SGD", "transaction_date": "2025-04-01", "intake_date": "2025-05-25", "as_of": "2025-06-01", "expected_eligible": false}
+{"id": "e5", "kind": "eligibility", "track": "card_scheme", "reason_code": "99.99", "amount_minor": 5000, "currency": "SGD", "transaction_date": "2025-05-01", "intake_date": "2025-05-10", "as_of": "2025-06-01", "expected_eligible": false}
+{"id": "e6", "kind": "eligibility", "track": "retail", "reason_code": "R-INR", "amount_minor": 7800, "currency": "SGD", "transaction_date": "2025-04-15", "intake_date": "2025-05-25", "as_of": "2025-06-01", "expected_eligible": true}
+{"id": "e7", "kind": "eligibility", "track": "card_scheme", "reason_code": "13.1", "amount_minor": 60000, "currency": "SGD", "transaction_date": "2025-05-01", "intake_date": "2025-05-03", "as_of": "2025-06-01", "expected_eligible": true}
+{"id": "e8", "kind": "eligibility", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 4200, "currency": "SGD", "transaction_date": "2025-05-10", "intake_date": "2025-05-01", "as_of": "2025-06-01", "expected_eligible": false}
+# --- abuse: velocity fires at >4 (+2), amount at >50000 (+1), refunds at >200000 (+2), any prior
+#     abuse (+3); review at score>=3, deny at score>=5. Amount alone can never reach the bar. ---
+{"id": "a1", "kind": "abuse", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 1500, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 0, "prior_abuse_count": 0, "refund_total_minor_90d": 0, "expected_outcome": "allow"}
+{"id": "a2", "kind": "abuse", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 80000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 0, "prior_abuse_count": 0, "refund_total_minor_90d": 0, "expected_outcome": "allow"}
+{"id": "a3", "kind": "abuse", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 80000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 9, "prior_abuse_count": 0, "refund_total_minor_90d": 0, "expected_outcome": "review"}
+{"id": "a4", "kind": "abuse", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 80000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 9, "prior_abuse_count": 1, "refund_total_minor_90d": 300000, "expected_outcome": "deny"}
+{"id": "a5", "kind": "abuse", "track": "card_scheme", "reason_code": "13.1", "amount_minor": 1000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 0, "prior_abuse_count": 1, "refund_total_minor_90d": 0, "expected_outcome": "review"}
+{"id": "a6", "kind": "abuse", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 1000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 5, "prior_abuse_count": 0, "refund_total_minor_90d": 250000, "expected_outcome": "review"}
+{"id": "a7", "kind": "abuse", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 1000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 6, "prior_abuse_count": 1, "refund_total_minor_90d": 0, "expected_outcome": "deny"}
+{"id": "a8", "kind": "abuse", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 60000, "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "dispute_count_90d": 5, "prior_abuse_count": 0, "refund_total_minor_90d": 0, "expected_outcome": "review"}
+# --- intake: the model classifies a transcript into the CLOSED category set; no keyword hit is
+#     UNKNOWN (fails closed). Labels are what a human reads the transcript to mean. ---
+{"id": "i1", "kind": "intake", "transcript": "I see a card charge I never made at an online shop.", "expected_category": "card_unauthorised"}
+{"id": "i2", "kind": "intake", "transcript": "My marketplace order never arrived and the seller went quiet.", "expected_category": "card_goods_not_received"}
+{"id": "i3", "kind": "intake", "transcript": "This is a formal complaint, please escalate it to the regulator.", "expected_category": "complaint_regulatory"}
+{"id": "i4", "kind": "intake", "transcript": "I would like a refund for a purchase I regret.", "expected_category": "retail_refund"}
+{"id": "i5", "kind": "intake", "transcript": "The delivered item was not as described at all.", "expected_category": "card_not_as_described"}
+{"id": "i6", "kind": "intake", "transcript": "Hello, I just have a general question about my statement balance.", "expected_category": "unknown"}
+{"id": "i7", "kind": "intake", "transcript": "There is an unauthorised transaction I did not approve.", "expected_category": "card_unauthorised"}
+{"id": "i8", "kind": "intake", "transcript": "The parcel never came even after two weeks of waiting.", "expected_category": "retail_not_received"}
+# --- lifecycle: a golden journey of triggers and the exact states the workflow must visit. ---
+{"id": "l1", "kind": "lifecycle", "track": "card_scheme", "triggers": ["submit", "eligible", "contest", "represented"], "expected_states": ["intake", "eligibility_check", "evidence_review", "representment", "closed_won"]}
+{"id": "l2", "kind": "lifecycle", "track": "card_scheme", "triggers": ["submit", "ineligible"], "expected_states": ["intake", "eligibility_check", "rejected"]}
+{"id": "l3", "kind": "lifecycle", "track": "retail", "triggers": ["submit", "eligible", "refund_approved", "close"], "expected_states": ["intake", "eligibility_check", "evidence_review", "refund_issued", "closed_lost"]}
+{"id": "l4", "kind": "lifecycle", "track": "retail", "triggers": ["submit", "eligible", "abuse_confirmed"], "expected_states": ["intake", "eligibility_check", "evidence_review", "closed_abuse"]}
+{"id": "l5", "kind": "lifecycle", "track": "card_scheme", "triggers": ["submit", "eligible", "contest", "issuer_reasserts", "escalate", "ruling_for_merchant"], "expected_states": ["intake", "eligibility_check", "evidence_review", "representment", "pre_arbitration", "arbitration", "closed_won"]}
+# --- grounded: the representment draft must restate only engine-sourced figures. ---
+{"id": "g1", "kind": "grounded", "track": "card_scheme", "reason_code": "10.4", "amount_minor": 42000, "currency": "SGD", "transaction_date": "2025-05-01", "intake_date": "2025-05-10", "evidence": [{"id": "EV-1", "text": "proof_of_delivery: tracking SG9988\ncarrier: FictionalPost\nsigned_by: recipient"}]}
+{"id": "g2", "kind": "grounded", "track": "card_scheme", "reason_code": "13.1", "amount_minor": 60000, "currency": "SGD", "transaction_date": "2025-05-01", "intake_date": "2025-05-03", "evidence": [{"id": "EV-2", "text": "avs_result: Y\nreceipt_total: 60000\nauth_code: 771230"}]}
+{"id": "g3", "kind": "grounded", "track": "retail", "reason_code": "R-REFUND", "amount_minor": 1500, "currency": "SGD", "transaction_date": "2025-05-20", "intake_date": "2025-05-25", "evidence": [{"id": "EV-3", "text": "order_record: ORD-5521\namount: 1500"}]}
+# --- pii: a planted synthetic NRIC must be masked before it reaches any audit record. One case
+#     opens (transcript becomes the summary) and one fails closed (redacted citation snippet). ---
+{"id": "p1", "kind": "pii", "conversation_ref": "conv-eval-pii-open", "planted": "S1234567D"}
+{"id": "p2", "kind": "pii", "conversation_ref": "conv-demo-pii", "planted": "S1234567D"}

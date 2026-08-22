@@ -1,0 +1,65 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://catalog.example/schema/ops_worklist_export/v1",
+  "title": "Ops worklist export (v1)",
+  "description": "The cross-repo ops-worklist metrics contract the control room (F5) consumes. AUTHORITATIVE OWNER is F1 (recon-breaks-engine); F2 conforms to it and adds a backward-compatible complaint-signal extension under 'signal'. Every consuming and producing repo carries a drift guard against this file. Amounts are integer minor units; every timestamp is a UTC date.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "feed_id", "as_of", "rows"],
+  "properties": {
+    "contract_version": {"type": "string", "const": "1"},
+    "feed_id": {"type": "string", "minLength": 1},
+    "as_of": {"type": "string", "format": "date"},
+    "rows": {
+      "type": "array",
+      "items": {"$ref": "#/definitions/row"}
+    }
+  },
+  "definitions": {
+    "row": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "item_id",
+        "tenant",
+        "queue",
+        "state",
+        "age_days",
+        "aging_bucket",
+        "sla_clock",
+        "amount_minor",
+        "currency"
+      ],
+      "properties": {
+        "item_id": {"type": "string", "minLength": 1},
+        "tenant": {"type": "string"},
+        "queue": {"type": "string", "minLength": 1},
+        "state": {"type": "string", "minLength": 1},
+        "age_days": {"type": "integer", "minimum": 0},
+        "aging_bucket": {"type": "string", "enum": ["0-3d", "4-7d", "8-14d", "15-30d", "30d+"]},
+        "sla_clock": {
+          "type": "string",
+          "enum": ["on_track", "due_soon", "breached", "none"]
+        },
+        "amount_minor": {"type": "integer"},
+        "currency": {"type": "string", "minLength": 3, "maxLength": 3},
+        "throughput_closed_today": {"type": "integer", "minimum": 0},
+        "signal": {"$ref": "#/definitions/complaint_signal"}
+      }
+    },
+    "complaint_signal": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "F2's backward-compatible extension: the deterministic intake signal Rgc15 consumes.",
+      "required": ["category", "eligibility", "severity"],
+      "properties": {
+        "category": {"type": "string"},
+        "product": {"type": "string"},
+        "market": {"type": "string"},
+        "severity": {"type": "string", "enum": ["low", "medium", "high", "critical"]},
+        "eligibility": {"type": "string", "enum": ["eligible", "ineligible", "unknown"]},
+        "clock_state": {"type": "string", "enum": ["on_track", "due_soon", "breached", "none"]}
+      }
+    }
+  }
+}
