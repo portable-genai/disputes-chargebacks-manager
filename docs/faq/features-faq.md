@@ -85,8 +85,8 @@ concerns owned by sibling systems, and a fork should not rebuild them. The hones
 
 | Concern | Owner | State here |
 |---|---|---|
-| Human-review and maker-checker console | **Hrz7** | Integrated. `ports/review_router.py`, adapter in every profile, `HRZ_HUMAN_REVIEW_URL`. |
-| Case spine (cases, states, clocks) | **Hrz7** | Integrated. `ports/case_engine.py` against `/v1/cases` at `HRZ_CASE_URL`; the offline adapter computes the same deadlines. |
+| Human-review and maker-checker console | **Hrz7** | Integrated. `ports/review_router.py`, adapter in every profile, `HUMAN_REVIEW_URL`. |
+| Case spine (cases, states, clocks) | **Hrz7** | Integrated. `ports/case_engine.py` against `/v1/cases` at `CASE_URL`; the offline adapter computes the same deadlines. |
 | Regulator-response drafting for a complaint | **Doc6** | Integrated. `ports/regulator_response.py` calls Doc6's A2A tools at `DOC6_A2A_URL` and refuses when unset. |
 | Tracing and the shared observability sink | **Hrz5** | Partly. Spans go OTLP to the Hrz5 collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; the audit record does not land in the shared sink yet (rule R2). |
 | AI-quality and promotion gate | **Hrz4** | Partly. `eval/run_eval.py --mode gate` is the client half; the metric bundle is not registered with Hrz4 yet. |
