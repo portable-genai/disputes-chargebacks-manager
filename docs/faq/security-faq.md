@@ -80,7 +80,7 @@ an independent planted-literal check, so a broken pack row cannot silently pass 
 Three, all plain stdlib `urllib` rather than a cloud SDK: the Hrz7 review submission and the Hrz7
 case spine, and the Doc6 A2A regulator-response call. The review path uses the shared
 `review-kit` client, which refuses a plaintext non-loopback URL and a missing bearer at
-construction. Outbound credentials (`HRZ7_S2S_TOKEN`, `HRZ7_S2S_SIGNING_KEY`) are deliberately
+construction. Outbound credentials (`HUMAN_REVIEW_S2S_TOKEN`, `HUMAN_REVIEW_S2S_SIGNING_KEY`) are deliberately
 distinct variables from the inbound `DISPUTES_S2S_TOKEN`. Each managed adapter REFUSES when its
 endpoint is unset rather than silently succeeding.
 

@@ -27,7 +27,7 @@ class CloudCaseEngine:
         if not base:
             raise RuntimeError(
                 "case_url is not configured, so the Hrz7 case spine is unreachable. Set "
-                "HRZ_HUMAN_REVIEW_URL / the case endpoint (config/settings.yaml case_url); an "
+                "HUMAN_REVIEW_URL / the case endpoint (config/settings.yaml case_url); an "
                 "escalation must not be opened with no case behind it."
             )
         return base.rstrip("/")

@@ -146,8 +146,8 @@ which are actually wired today: the table below matches the `adapters:` block in
 
 | Concern | Owned by | Wired here today? |
 |---|---|---|
-| Human review and maker-checker console | **Hrz7** | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HRZ_HUMAN_REVIEW_URL`) and REFUSES when no console is configured. Rule R8. |
-| Case spine (cases, states, clocks) | **Hrz7** | **Yes.** `ports/case_engine.py`; the managed adapter drives `/v1/cases` at `case_url` (`HRZ_CASE_URL`) and refuses when unset. The offline adapter computes the same deadlines from the same `ClockSpec` data. |
+| Human review and maker-checker console | **Hrz7** | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HUMAN_REVIEW_URL`) and REFUSES when no console is configured. Rule R8. |
+| Case spine (cases, states, clocks) | **Hrz7** | **Yes.** `ports/case_engine.py`; the managed adapter drives `/v1/cases` at `case_url` (`CASE_URL`) and refuses when unset. The offline adapter computes the same deadlines from the same `ClockSpec` data. |
 | Regulator-response drafting for a regulatory-track complaint | **Doc6** (`complaints-review`) | **Yes.** `ports/regulator_response.py`; the managed adapter calls Doc6's A2A tools at `doc6_url` (`DOC6_A2A_URL`) and refuses when unset, so a regulatory complaint cannot silently skip that module. |
 | Tracing and the immutable audit sink | **Hrz5** | **Partly.** The tracer port is bound in all three families and the managed adapter exports OTLP to the Hrz5 collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Cloud Trace when it is not). The audit half is still local (hash-chained and anchored) or Cloud Logging; COMPLIANCE rule R2 carries the open half. |
 | AI-quality and promotion gate | **Hrz4** | **Partly.** `eval/run_eval.py --mode gate` is the client half and refuses to run off the managed profile, but this repo's metric bundle is not registered with Hrz4 yet (COMPLIANCE P-08 and R5). |
