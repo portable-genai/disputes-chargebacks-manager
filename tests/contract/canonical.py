@@ -199,8 +199,13 @@ CANONICAL_CALLS: dict[str, PortCase] = {
     "conversation_channel": PortCase(
         invoke=_channel_invoke,
         answered=_channel_answered,
-        # The lazy Dialogflow import is the first thing the managed channel does.
-        managed_refusal=(ImportError,),
+        # TWO refusals, because there are two ways this cannot answer and both are true.
+        # With no SDK installed the lazy Dialogflow import raises first, which is what this
+        # pinned before. With the SDK present it raises NotImplementedError: the adapter used
+        # to call `SessionsClient.get_session_entity_type`, which does not exist on that
+        # client, so the port would have died with AttributeError on its first live call.
+        # Found 2026-08-31 by the lint-gcp job, the first check able to see the SDK at all.
+        managed_refusal=(ImportError, NotImplementedError),
         detail="return the turns of an intake conversation",
     ),
     "regulator_response": PortCase(
