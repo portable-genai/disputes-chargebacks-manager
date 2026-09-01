@@ -94,7 +94,7 @@ a wording change.
 `make gate` does, immediately: it is offline, SDK-free and credential-free (ruff, `ruff format
 --check`, `mypy src`, `pytest -m 'not integration'`, then the eval smoke run), and nothing in it
 needs a cloud project or a network. `make audit` is the one step that needs a vulnerability feed
-and is deliberately separate. Note two things about the shipped CI: `.github/workflows/ci.yaml` is
+and is deliberately separate. Note two things about the shipped CI: the hosted Cloud Build check is
 a thin caller of a shared reusable hard-gate workflow pinned to a tag of the template repository,
 so a fork either keeps access to that repository or inlines the workflow; and nothing in the
 offline gate runs `terraform test`, so `infra/terraform/production_edge.tftest.hcl` is a set of
