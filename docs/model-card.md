@@ -58,7 +58,7 @@ RAISE, so a placeholder that quietly started returning something would fail the 
 
 - **Pin a model, write the prompts, and finish the managed narration adapter** (P-07, P-11).
   `adapters/gcp/narration.py` raises today. Record the exact model id and version here when it is
-  wired. `eval/run_eval.py` names `gemini-2.5-flash` to the Hrz4 promotion client in `--mode gate`;
+  wired. `eval/run_eval.py` names `gemini-3.5-flash` to the Hrz4 promotion client in `--mode gate`;
   that string is the promotion request's declaration, not a model this repo calls.
 - **Finish the managed document-extraction call.** `CloudDocumentExtractor.extract_raw` builds a
   `ProcessRequest` with no processor resource name, so it cannot succeed against a live Document
