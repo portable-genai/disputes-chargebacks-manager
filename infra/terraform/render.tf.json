@@ -3,6 +3,6 @@
     "render_region": "asia-southeast1",
     "render_package_name": "disputes_chargebacks_manager",
     "render_env_prefix": "DISPUTES",
-    "render_catalog_id": "F2"
+    "render_repository": "disputes-chargebacks-manager"
   }
 }

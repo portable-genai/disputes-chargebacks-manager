@@ -358,16 +358,18 @@ class DisputeService:
             citations=tuple(citations),
         )
 
-    # -- regulator response (Doc6) --------------------------------------- #
+    # -- regulator response (complaints-review) --------------------------------------- #
     def regulator_response(self, dispute: Dispute, *, actor: str) -> RegulatorDraft:
-        """Delegate regulator-response drafting to the Doc6 module with a redacted narrative."""
+        """Delegate regulator-response drafting to the complaints-review module with a redacted
+        narrative.
+        """
         redacted = redact(dispute.narrative, PII_PATTERNS)
         draft = self._regulator.draft_response(
             dispute_id=dispute.id,
             category=dispute.reason_code or "complaint",
             redacted_narrative=redacted,
         )
-        summary = f"{dispute.id}: regulator-response draft via Doc6 module"
+        summary = f"{dispute.id}: regulator-response draft via complaints-review module"
         self._record(
             "regulator_response", actor, Decision.ESCALATED, Severity.HIGH, summary, draft.citations
         )

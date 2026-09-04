@@ -1,9 +1,10 @@
-"""Local CaseEnginePort: compute case deadlines from the workflow clocks, no live Hrz7.
+"""Local CaseEnginePort: compute case deadlines from the workflow clocks, no live
+human-review-console.
 
-The offline recording adapter for the case spine. It opens a case by deriving each deadline from
-the workflow's ``ClockSpec`` set relative to the open date, using the SAME clock data the managed
-adapter hands Hrz7, so a golden journey's clock breaches are reproducible offline. It records the
-state it is moved to; legality is the state machine's job, asserted by the caller.
+The offline recording adapter for the case spine. It opens a case by deriving each deadline from the
+workflow's ``ClockSpec`` set relative to the open date, using the SAME clock data the managed
+adapter hands human-review-console, so a golden journey's clock breaches are reproducible offline.
+It records the state it is moved to; legality is the state machine's job, asserted by the caller.
 """
 
 from __future__ import annotations

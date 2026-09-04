@@ -25,7 +25,7 @@ review-gated where they are consequential:
 4. **A representment draft.** Evidence documents are parsed at the edge into labelled fields, each
    cited back to the document; the draft narrates over those fields and the dispute facts. It
    always requires human review and never posts to a scheme.
-5. **A regulator-response draft**, delegated to the Doc6 module with a redacted narrative, also
+5. **A regulator-response draft**, delegated to the `complaints-review` module with a redacted narrative, also
    always review-gated.
 
 There is also a deterministic **ops worklist export** (`domain/ops_export.py`) in the shared
@@ -55,7 +55,7 @@ runs on the deterministic local narrator. See [`../model-card.md`](../model-card
 
 ### Is anything auto-approved? Does it close a dispute or move money?
 
-No. Every consequential outcome sets `requires_human_review` AND is ROUTED to the Hrz7 console in
+No. Every consequential outcome sets `requires_human_review` AND is ROUTED to the `human-review-console` in
 the same call that produced it (rule R8), with the payload redacted before the wire and the
 verified principal threaded as maker; a CRITICAL band demands two approvals. The response carries
 a `review_ref`, so a caller can tell a routed escalation from one that stopped here, and the
@@ -85,22 +85,22 @@ concerns owned by sibling systems, and a fork should not rebuild them. The hones
 
 | Concern | Owner | State here |
 |---|---|---|
-| Human-review and maker-checker console | **Hrz7** | Integrated. `ports/review_router.py`, adapter in every profile, `HUMAN_REVIEW_URL`. |
-| Case spine (cases, states, clocks) | **Hrz7** | Integrated. `ports/case_engine.py` against `/v1/cases` at `CASE_URL`; the offline adapter computes the same deadlines. |
-| Regulator-response drafting for a complaint | **Doc6** | Integrated. `ports/regulator_response.py` calls Doc6's A2A tools at `DOC6_A2A_URL` and refuses when unset. |
-| Tracing and the shared observability sink | **Hrz5** | Partly. Spans go OTLP to the Hrz5 collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; the audit record does not land in the shared sink yet (rule R2). |
-| AI-quality and promotion gate | **Hrz4** | Partly. `eval/run_eval.py --mode gate` is the client half; the metric bundle is not registered with Hrz4 yet. |
-| Agent registry, versioning, entitlements | **Hrz3** | Partly. The A2A card is published; nothing registers it. |
-| Prompt-injection defence, output filtering | **Hrz1** | Not integrated. No `GuardrailPort` exists (rule R1). |
-| Governed retrieval with citations | **Hrz2** | Not integrated. No retrieval port and nothing grounded against a knowledge base. |
-| Downstream ops worklist and handover | **F5**, with the shared contract owned by **F1** | This repo CONFORMS to the export contract and adds a `signal` extension that Rgc15 reads. |
+| Human-review and maker-checker console | `human-review-console` | Integrated. `ports/review_router.py`, adapter in every profile, `HUMAN_REVIEW_URL`. |
+| Case spine (cases, states, clocks) | `human-review-console` | Integrated. `ports/case_engine.py` against `/v1/cases` at `CASE_URL`; the offline adapter computes the same deadlines. |
+| Regulator-response drafting for a complaint | `complaints-review` | Integrated. `ports/regulator_response.py` calls `complaints-review`'s A2A tools at `DOC6_A2A_URL` and refuses when unset. |
+| Tracing and the shared observability sink | `agent-observability` | Partly. Spans go OTLP to the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; the audit record does not land in the shared sink yet (rule R2). |
+| AI-quality and promotion gate | `model-quality-gate` | Partly. `eval/run_eval.py --mode gate` is the client half; the metric bundle is not registered with `model-quality-gate` yet. |
+| Agent registry, versioning, entitlements | `agent-registry` | Partly. The A2A card is published; nothing registers it. |
+| Prompt-injection defence, output filtering | `agent-guardrail-gateway` | Not integrated. No `GuardrailPort` exists (rule R1). |
+| Governed retrieval with citations | `enterprise-knowledge-base` | Not integrated. No retrieval port and nothing grounded against a knowledge base. |
+| Downstream ops worklist and handover | **F5**, with the shared contract owned by **F1** | This repo CONFORMS to the export contract and adds a `signal` extension that `consumer-duty-monitoring` reads. |
 
 ### Where does the dispute lifecycle stop being this repo's job?
 
 At the console and at the scheme. F2 decides eligibility, scores abuse, drives the lifecycle
-states and drafts the representment; a human in Hrz7 approves or rejects, and posting to a card
+states and drafts the representment; a human in `human-review-console` approves or rejects, and posting to a card
 scheme or a marketplace is an integration the adopter owns. F2 also does not do the conduct or
-complaints investigation itself: a regulatory-track intake fails closed and is handed to Doc6.
+complaints investigation itself: a regulatory-track intake fails closed and is handed to `complaints-review`.
 
 ### How do I see it working?
 

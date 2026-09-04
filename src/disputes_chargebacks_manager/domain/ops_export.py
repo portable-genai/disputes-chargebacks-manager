@@ -2,9 +2,9 @@
 
 The shared data contract (SPEC, "Shared across the wave") is authoritatively owned by F1; this
 module produces rows in that shape plus a backward-compatible ``signal`` extension carrying the
-deterministic intake signal Rgc15 reads (category, product, market, severity, eligibility, clock
-state). It is PURE: every field is computed from engine outputs with an explicit ``as_of``, and
-``tests/unit/test_ops_export.py`` validates each built document against
+deterministic intake signal consumer-duty-monitoring reads (category, product, market, severity,
+eligibility, clock state). It is PURE: every field is computed from engine outputs with an explicit
+``as_of``, and ``tests/unit/test_ops_export.py`` validates each built document against
 ``schema/ops_worklist_export.schema.json`` and drift-guards the aging buckets and clock states.
 
 Nothing here writes to a warehouse: the BigQuery export adapter is a per-deployment concern. This

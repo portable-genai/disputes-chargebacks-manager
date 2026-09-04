@@ -184,4 +184,6 @@ def test_regulator_response_redacts_and_review_gates() -> None:
     service = _service()
     draft = service.regulator_response(sample_cases.PII_DISPUTE, actor=sample_cases.ACTOR)
     assert draft.requires_human_review is True
-    assert sample_cases.PLANTED_NRIC not in draft.draft_text, "the narrative reached Doc6 redacted"
+    assert sample_cases.PLANTED_NRIC not in draft.draft_text, (
+        "the narrative reached complaints-review redacted"
+    )

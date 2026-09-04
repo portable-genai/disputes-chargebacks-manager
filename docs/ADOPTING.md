@@ -36,7 +36,7 @@ rewrites `models.py` and leaves `kernel.py` alone.
 
 If your product is another *case-and-clock* ops vertical (claims, complaints, collections,
 recoveries), most of the hexagon, the three profiles, the deterministic-verdict pattern, the
-anchored audit chain, the eval gate and the Hrz7 review routing transfer directly; you replace
+anchored audit chain, the eval gate and the `human-review-console` review routing transfer directly; you replace
 the artifact models, the workflows and the engines, and you retune the policy numbers.
 
 ## 2. Core-vs-adopter-owned files (so upstream merges stay mechanical)
@@ -127,7 +127,7 @@ Markdown is left alone; the script deliberately does NOT touch the human decisio
    retune `THRESHOLDS` in `eval/run_eval.py`: a fork inherits a green gate that measures the WRONG
    ruleset until you do. The structure is generic (the deterministic metrics are held at 1.0, the
    classification metric lower, the safety metric at 0.99); the golden cases are yours. Register
-   your own bundle name with Hrz4 before `--mode gate` has an authority to ask.
+   your own bundle name with `model-quality-gate` before `--mode gate` has an authority to ask.
 6. **Deployment posture.** Review the Dockerfile (digest-pinned base, non-root uid 10001,
    `HEALTHCHECK` on `/healthz`) and `infra/terraform/`: the Org Policy guardrails
    (`var.enable_org_policies`), the regional CMEK ring, the dry-run-first VPC-SC perimeter
@@ -146,20 +146,20 @@ which are actually wired today: the table below matches the `adapters:` block in
 
 | Concern | Owned by | Wired here today? |
 |---|---|---|
-| Human review and maker-checker console | **Hrz7** | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HUMAN_REVIEW_URL`) and REFUSES when no console is configured. Rule R8. |
-| Case spine (cases, states, clocks) | **Hrz7** | **Yes.** `ports/case_engine.py`; the managed adapter drives `/v1/cases` at `case_url` (`CASE_URL`) and refuses when unset. The offline adapter computes the same deadlines from the same `ClockSpec` data. |
-| Regulator-response drafting for a regulatory-track complaint | **Doc6** (`complaints-review`) | **Yes.** `ports/regulator_response.py`; the managed adapter calls Doc6's A2A tools at `doc6_url` (`DOC6_A2A_URL`) and refuses when unset, so a regulatory complaint cannot silently skip that module. |
-| Tracing and the immutable audit sink | **Hrz5** | **Partly.** The tracer port is bound in all three families and the managed adapter exports OTLP to the Hrz5 collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Cloud Trace when it is not). The audit half is still local (hash-chained and anchored) or Cloud Logging; COMPLIANCE rule R2 carries the open half. |
-| AI-quality and promotion gate | **Hrz4** | **Partly.** `eval/run_eval.py --mode gate` is the client half and refuses to run off the managed profile, but this repo's metric bundle is not registered with Hrz4 yet (COMPLIANCE P-08 and R5). |
-| Agent registry, versioning, entitlements | **Hrz3** | **Partly.** The A2A card is published at `/.well-known/agent-card.json` from the same tool table the runtime binds, but nothing registers it with Hrz3 or takes the agent's identity from it (COMPLIANCE R4). |
-| Runtime guardrail: prompt-injection defence and output filtering | **Hrz1** | **No.** There is no `GuardrailPort` in `ports/`. The redaction this repo does own runs before the audit write, before the review payload and before a tool result returns, but injection defence at the model boundary is Hrz1's job and is an open TODO (COMPLIANCE R1). |
-| Governed retrieval and citations over a knowledge base | **Hrz2** | **No.** There is no retrieval port and nothing is grounded against a knowledge base, so COMPLIANCE P-05 and R3 are honestly unclaimed. Add a `KnowledgeBasePort` bound to Hrz2, and make empty retrieval a hard error, before claiming either. |
-| Project intake validation | **Rsk3** | **No.** An intake action rather than a code control (COMPLIANCE R6). |
-| Marketing and financial-promotions claim check | **Mkt6** | **n/a.** This service produces no customer-facing marketing output. |
+| Human review and maker-checker console | `human-review-console` | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HUMAN_REVIEW_URL`) and REFUSES when no console is configured. Rule R8. |
+| Case spine (cases, states, clocks) | `human-review-console` | **Yes.** `ports/case_engine.py`; the managed adapter drives `/v1/cases` at `case_url` (`CASE_URL`) and refuses when unset. The offline adapter computes the same deadlines from the same `ClockSpec` data. |
+| Regulator-response drafting for a regulatory-track complaint | `complaints-review` (`complaints-review`) | **Yes.** `ports/regulator_response.py`; the managed adapter calls `complaints-review`'s A2A tools at `doc6_url` (`DOC6_A2A_URL`) and refuses when unset, so a regulatory complaint cannot silently skip that module. |
+| Tracing and the immutable audit sink | `agent-observability` | **Partly.** The tracer port is bound in all three families and the managed adapter exports OTLP to the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Cloud Trace when it is not). The audit half is still local (hash-chained and anchored) or Cloud Logging; COMPLIANCE rule R2 carries the open half. |
+| AI-quality and promotion gate | `model-quality-gate` | **Partly.** `eval/run_eval.py --mode gate` is the client half and refuses to run off the managed profile, but this repo's metric bundle is not registered with `model-quality-gate` yet (COMPLIANCE P-08 and R5). |
+| Agent registry, versioning, entitlements | `agent-registry` | **Partly.** The A2A card is published at `/.well-known/agent-card.json` from the same tool table the runtime binds, but nothing registers it with `agent-registry` or takes the agent's identity from it (COMPLIANCE R4). |
+| Runtime guardrail: prompt-injection defence and output filtering | `agent-guardrail-gateway` | **No.** There is no `GuardrailPort` in `ports/`. The redaction this repo does own runs before the audit write, before the review payload and before a tool result returns, but injection defence at the model boundary is `agent-guardrail-gateway`'s job and is an open TODO (COMPLIANCE R1). |
+| Governed retrieval and citations over a knowledge base | `enterprise-knowledge-base` | **No.** There is no retrieval port and nothing is grounded against a knowledge base, so COMPLIANCE P-05 and R3 are honestly unclaimed. Add a `KnowledgeBasePort` bound to `enterprise-knowledge-base`, and make empty retrieval a hard error, before claiming either. |
+| Project intake validation | `architecture-validator` | **No.** An intake action rather than a code control (COMPLIANCE R6). |
+| Marketing and financial-promotions claim check | `marketing-compliance-gate` | **n/a.** This service produces no customer-facing marketing output. |
 
 One cross-repo contract runs the other way: `domain/ops_export.py` builds rows in the shared
 ops-worklist shape that F5 (the control-room handover) consumes, with a backward-compatible
-`signal` extension that Rgc15 reads. Keep the schema in `schema/ops_worklist_export.schema.json`
+`signal` extension that `consumer-duty-monitoring` reads. Keep the schema in `schema/ops_worklist_export.schema.json`
 in step with the builder if you change it; `tests/unit/test_ops_export.py` validates every built
 document against it.
 
@@ -173,7 +173,7 @@ document against it.
 - [ ] Reviewed the lifecycle clocks in `domain/workflows.py` against your regulatory deadlines.
 - [ ] Set `JURISDICTIONS` in `domain/pii.py` to the markets this deployment serves.
 - [ ] Replaced every synthetic fixture, transcript and golden case.
-- [ ] Rebuilt the eval golden set and registered your metric bundle with Hrz4.
+- [ ] Rebuilt the eval golden set and registered your metric bundle with `model-quality-gate`.
 - [ ] Reviewed the deploy posture (Dockerfile, Terraform toggles, WORM retention, bind address).
-- [ ] Wired your Hrz7 review and case endpoints, and decided which other sibling systems you integrate vs stub.
+- [ ] Wired your `human-review-console` review and case endpoints, and decided which other sibling systems you integrate vs stub.
 - [ ] Recorded your baseline upstream tag so you can take future fixes.

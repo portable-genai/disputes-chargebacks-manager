@@ -1,10 +1,10 @@
-"""Managed RegulatorResponsePort: call Doc6's A2A tools over S2S (no cloud SDK).
+"""Managed RegulatorResponsePort: call complaints-review's A2A tools over S2S (no cloud SDK).
 
-Doc6 (complaints-review) stays its own repo and remains authoritative for
+complaints-review (complaints-review) stays its own repo and remains authoritative for
 regulator-response drafting; this adapter reaches it over HTTPS with stdlib ``urllib``, so it
 imports with no GCP SDK. It FAILS CLOSED when ``doc6_url`` is unset: a regulatory-track dispute
 must not silently skip the regulator-response module. That refusal is what the offline parity
-suite observes. The live A2A call is exercised against a running Doc6 in integration.
+suite observes. The live A2A call is exercised against a running complaints-review in integration.
 """
 
 from __future__ import annotations
@@ -14,7 +14,9 @@ from ...domain.models import RegulatorDraft
 
 
 class CloudRegulatorResponder:
-    """Delegate regulator-response drafting to Doc6's A2A tools (rule R8 review-gated)."""
+    """Delegate regulator-response drafting to complaints-review's A2A
+    tools (rule R8 review-gated).
+    """
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -25,7 +27,7 @@ class CloudRegulatorResponder:
         base = self._settings.doc6_url.strip()
         if not base:
             raise RuntimeError(
-                "doc6_url is not configured, so the Doc6 regulator-response module is "
+                "doc6_url is not configured, so the complaints-review regulator-response module is "
                 "unreachable. Set DOC6_A2A_URL (config/settings.yaml doc6_url); a "
                 "regulatory-track dispute must reach the regulator-response module."
             )
@@ -33,7 +35,7 @@ class CloudRegulatorResponder:
 
     def _call_doc6(
         self, base: str, dispute_id: str, category: str, redacted_narrative: str
-    ) -> RegulatorDraft:  # pragma: no cover - needs live Doc6
+    ) -> RegulatorDraft:  # pragma: no cover - needs live complaints-review
         import json
         import urllib.request
 
@@ -54,7 +56,7 @@ class CloudRegulatorResponder:
             citations=(
                 Citation(
                     source_id=f"doc6:{dispute_id}",
-                    title="Doc6 regulator draft",
+                    title="complaints-review regulator draft",
                     snippet=category,
                 ),
             ),

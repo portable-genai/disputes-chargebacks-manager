@@ -1,11 +1,11 @@
-"""CaseEnginePort: the boundary onto Hrz7's case spine (open, advance, deadlines).
+"""CaseEnginePort: the boundary onto human-review-console's case spine (open, advance, deadlines).
 
-F2 depends on Hrz7 as its case spine (SPEC: F2 slice 2). This port names the hand-off; the
-platform adapter drives Hrz7's ``/v1/cases`` open and transition endpoints with a
-:class:`~..domain.workflows.WorkflowDefinition` and its ``ClockSpec`` clocks, the local recording
-adapter computes the same deadlines from the same clock data offline, and the on-prem adapter
-fails fast. The domain stays pure: it hands the engine a dispute and a workflow and receives a
-:class:`~..domain.models.CaseHandle`.
+F2 depends on human-review-console as its case spine (SPEC: F2 slice 2). This port names the
+hand-off; the platform adapter drives human-review-console's ``/v1/cases`` open and transition
+endpoints with a :class:`~..domain.workflows.WorkflowDefinition` and its ``ClockSpec`` clocks, the
+local recording adapter computes the same deadlines from the same clock data offline, and the
+on-prem adapter fails fast. The domain stays pure: it hands the engine a dispute and a workflow and
+receives a :class:`~..domain.models.CaseHandle`.
 """
 
 from __future__ import annotations

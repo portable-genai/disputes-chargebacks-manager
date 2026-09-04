@@ -1,9 +1,9 @@
 """The A2A discovery card: what this agent can be asked to do, in one machine-readable place.
 
-Served at ``/.well-known/agent-card.json`` and registrable with Hrz3 (rule R4). The card is
-built from the SAME tool table the runtime binds, so an agent cannot advertise a skill it does
-not implement or implement one it never advertises; ``tests/unit/test_agent_surface.py`` fails
-the build when the two disagree.
+Served at ``/.well-known/agent-card.json`` and registrable with agent-registry (rule R4). The card
+is built from the SAME tool table the runtime binds, so an agent cannot advertise a skill it does
+not implement or implement one it never advertises; ``tests/unit/test_agent_surface.py`` fails the
+build when the two disagree.
 
 Pure: domain types and stdlib only, no ADK and no cloud SDK, so the card can be generated and
 inspected offline.
@@ -48,7 +48,8 @@ SKILLS: tuple[AgentSkill, ...] = (
         name="Open dispute",
         description=(
             "Assess a dispute's reason-code eligibility deterministically, open a case on the "
-            "Hrz7 spine with its regulatory clocks, and ROUTE an ineligible rejection to human "
+            "human-review-console spine with its regulatory clocks, and ROUTE an ineligible "
+            "rejection to human "
             "sign-off (rule R8). The eligibility verdict is pure stdlib code, never a model."
         ),
     ),

@@ -211,7 +211,8 @@ CANONICAL_CALLS: dict[str, PortCase] = {
     "regulator_response": PortCase(
         invoke=_regulator_invoke,
         answered=_regulator_answered,
-        # With no Doc6 endpoint configured the managed adapter refuses, not returns a blank draft.
+        # With no complaints-review endpoint configured the managed adapter refuses, not returns a
+        # blank draft.
         managed_refusal=(RuntimeError,),
         detail="draft a review-gated regulator response",
     ),
@@ -234,7 +235,7 @@ CANONICAL_CALLS: dict[str, PortCase] = {
     "evaluation": PortCase(
         invoke=_evaluation_invoke,
         answered=_evaluation_answered,
-        # The managed gate reaches Hrz4 over HTTP, which is unreachable offline.
+        # The managed gate reaches model-quality-gate over HTTP, which is unreachable offline.
         managed_refusal=(Exception,),
         detail="score one golden dataset through the promotion authority",
     ),

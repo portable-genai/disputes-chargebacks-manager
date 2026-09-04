@@ -9,7 +9,7 @@ map with its evidence files and its open rows), [`../../SPEC.md`](../../SPEC.md)
 
 No. It is a decision-support service. Every consequential outcome (an ineligible rejection, an
 abuse REVIEW or DENY, a representment draft, a regulator draft, an unclassifiable or regulatory
-intake) sets `requires_human_review` AND is routed to the Hrz7 human-review console in the SAME
+intake) sets `requires_human_review` AND is routed to the `human-review-console` in the SAME
 call that produced it, through the shared `review-kit` (dependency rule R8). The flag alone
 is not the escalation, and `tests/unit/test_review_routing.py` asserts the ROUTING rather than the
 flag on the API, CLI and agent paths alike. A CRITICAL band demands two approvals. The managed
@@ -33,7 +33,7 @@ This service DOES process personal data (narratives, transcripts, evidence docum
 merchant references), so redaction is a live control rather than a not-applicable row. The shared
 `pii-kit` is applied with a per-vertical row selection and ORDER (`domain/pii.py`, jurisdictions
 `SG`, `HK`, `JP`, `AU` as shipped): before every audit write, before the intake transcript reaches
-the narration port, before the narrative reaches the Doc6 module, before any review payload leaves
+the narration port, before the narrative reaches the `complaints-review` module, before any review payload leaves
 the process (against EVERY jurisdiction's rows, because the console is a shared sink), and on
 every string of an agent tool result. The `pii_safety` eval metric is scored two ways and proved
 able to go red.
@@ -82,9 +82,9 @@ six metrics, each against the dataset's OWN `expected_*` label rather than the p
 verdict: `eligibility_accuracy` and `abuse_accuracy` and `lifecycle_trace` at 1.0 (any single
 divergence fails), `intake_accuracy` at 0.80, `groundedness` and `pii_safety` at 0.99. Before
 scoring it PROVES every metric can go red. `--mode gate` delegates the promotion verdict to the
-Hrz4 authority and refuses to run off the managed profile.
+`model-quality-gate` authority and refuses to run off the managed profile.
 
-Two open items: this repo's metric bundle is not registered with Hrz4 yet, so gate mode has no
+Two open items: this repo's metric bundle is not registered with `model-quality-gate` yet, so gate mode has no
 authority to ask (COMPLIANCE P-08 and R5); and the managed narration adapter is not wired, so the
 eval measures the deterministic local narrator rather than a live model. There is a starter model
 card at [`../model-card.md`](../model-card.md) recording the boundary and the controls still owed.
@@ -95,13 +95,13 @@ Read [`../../COMPLIANCE.md`](../../COMPLIANCE.md) for the authoritative list; th
 today are:
 
 - **P-05 and R3 (grounding, knowledge base)**: no retrieval port and nothing grounded against
-  Hrz2. Deliberately unclaimed rather than asserted.
+  `enterprise-knowledge-base`. Deliberately unclaimed rather than asserted.
 - **R1 (guardrail)**: no `GuardrailPort`. Injection defence and output filtering at the model
-  boundary are Hrz1's job and are not wired.
-- **R2 (shared audit and trace sink)**: spans reach the Hrz5 collector when the OTLP endpoint is
+  boundary are `agent-guardrail-gateway`'s job and are not wired.
+- **R2 (shared audit and trace sink)**: spans reach the `agent-observability` collector when the OTLP endpoint is
   set; the audit record does not land in the shared sink.
-- **R4 (agent registry)**: the A2A card is published but not registered with Hrz3.
-- **R6 (intake validation)**: an Rsk3 validation reference has not been recorded.
+- **R4 (agent registry)**: the A2A card is published but not registered with `agent-registry`.
+- **R6 (intake validation)**: an `architecture-validator` validation reference has not been recorded.
 - **P-10 (resilience)**: no timeouts, circuit breaker or documented kill switch per outbound
   dependency, and the CPS 230 recovery objectives are not yet in the runbook.
 - **P-11 (cost and latency)**: nothing to route, cache or budget until a model call exists.

@@ -98,7 +98,9 @@ class CaseDeadline:
 
 @dataclass(frozen=True, slots=True)
 class CaseHandle:
-    """The case-engine's receipt for an opened or advanced case (Hrz7 spine or local recorder)."""
+    """The case-engine's receipt for an opened or advanced case (human-review-console spine or local
+    recorder).
+    """
 
     case_id: str
     dispute_id: str
@@ -186,7 +188,7 @@ class RepresentmentPack:
 
 @dataclass(frozen=True, slots=True)
 class RegulatorDraft:
-    """A regulator-response draft produced by the Doc6 module, always review-gated."""
+    """A regulator-response draft produced by the complaints-review module, always review-gated."""
 
     dispute_id: str
     draft_text: str
