@@ -1,11 +1,11 @@
 """Deterministic refund-abuse decisioning: velocity, history and threshold rules.
 
 Pure stdlib. The verdict (ALLOW / REVIEW / DENY) is a deterministic function of a
-:class:`~.models.CustomerHistory` and the dispute amount against a frozen
-:class:`AbusePolicy`, whose numbers are the client's and live in ``config/policy_packs.yaml``.
-A DENY or a REVIEW is CONSEQUENTIAL: the orchestrator sets ``requires_human_review`` and routes
-it through the review kit (R8) with the severity mapped to Hrz7's maker-checker approval count.
-The engine never auto-closes; it recommends, and a human confirms.
+:class:`~.models.CustomerHistory` and the dispute amount against a frozen :class:`AbusePolicy`,
+whose numbers are the client's and live in ``config/policy_packs.yaml``. A DENY or a REVIEW is
+CONSEQUENTIAL: the orchestrator sets ``requires_human_review`` and routes it through the review kit
+(R8) with the severity mapped to human-review-console's maker-checker approval count. The engine
+never auto-closes; it recommends, and a human confirms.
 
 The score is a transparent sum of weighted signals so a reviewer can reconstruct it, and each
 firing signal carries a citation naming the datum that fired it.

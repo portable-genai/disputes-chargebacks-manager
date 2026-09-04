@@ -1,10 +1,10 @@
-"""Managed CaseEnginePort: drive Hrz7's ``/v1/cases`` spine over S2S (no cloud SDK).
+"""Managed CaseEnginePort: drive human-review-console's ``/v1/cases`` spine over S2S (no cloud SDK).
 
-The case spine is Hrz7, reached over HTTPS, so this adapter uses stdlib ``urllib`` (like the
-review kit) rather than a cloud SDK: it imports cleanly with no GCP SDK present. It FAILS CLOSED
-when ``case_url`` is unset, because an escalation with no case spine must not be silently dropped;
-that refusal is what the offline parity suite observes. The live open/transition calls are
-exercised against a running Hrz7 in integration, not in the SDK-free gate.
+The case spine is human-review-console, reached over HTTPS, so this adapter uses stdlib ``urllib``
+(like the review kit) rather than a cloud SDK: it imports cleanly with no GCP SDK present. It FAILS
+CLOSED when ``case_url`` is unset, because an escalation with no case spine must not be silently
+dropped; that refusal is what the offline parity suite observes. The live open/transition calls are
+exercised against a running human-review-console in integration, not in the SDK-free gate.
 """
 
 from __future__ import annotations
@@ -17,7 +17,7 @@ from ...domain.workflows import WorkflowDefinition
 
 
 class CloudCaseEngine:
-    """Open and advance cases on the Hrz7 case spine (rule R8 case backbone)."""
+    """Open and advance cases on the human-review-console case spine (rule R8 case backbone)."""
 
     def __init__(self, settings: Settings) -> None:
         self._settings = settings
@@ -26,7 +26,8 @@ class CloudCaseEngine:
         base = self._settings.case_url.strip()
         if not base:
             raise RuntimeError(
-                "case_url is not configured, so the Hrz7 case spine is unreachable. Set "
+                "case_url is not configured, so the human-review-console case spine is "
+                "unreachable. Set "
                 "HUMAN_REVIEW_URL / the case endpoint (config/settings.yaml case_url); an "
                 "escalation must not be opened with no case behind it."
             )
@@ -54,7 +55,7 @@ class CloudCaseEngine:
         dispute: Dispute,
         workflow: WorkflowDefinition,
         deadlines: tuple[CaseDeadline, ...],
-    ) -> CaseHandle:  # pragma: no cover - needs live Hrz7
+    ) -> CaseHandle:  # pragma: no cover - needs live human-review-console
         import json
         import urllib.request
 
@@ -78,7 +79,7 @@ class CloudCaseEngine:
 
     def _post_transition(
         self, base: str, handle: CaseHandle, target: DisputeState, trigger: str
-    ) -> CaseHandle:  # pragma: no cover - needs live Hrz7
+    ) -> CaseHandle:  # pragma: no cover - needs live human-review-console
         import json
         import urllib.request
 

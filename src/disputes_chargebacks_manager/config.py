@@ -494,7 +494,7 @@ class Settings:
     #: that verifies perfectly. Empty means no anchor, which is right for the ephemeral
     #: ``:memory:`` store and wrong for anything durable.
     audit_anchor_path: str = ""
-    #: Base URL of the Hrz7 Human-Review console the R8 producer path submits to.
+    #: Base URL of the human-review-console Human-Review console the R8 producer path submits to.
     review_url: str = ""
     #: The audience the managed IAP identity adapter verifies the signed assertion AGAINST: the
     #: IAP-protected resource, ``/projects/<NUM>/global/backendServices/<ID>`` behind an HTTPS
@@ -511,10 +511,12 @@ class Settings:
     #: a trace resource path. Empty is valid: on Cloud Run the exporter resolves it
     #: from the metadata server.
     project_id: str = ""
-    #: Base URL of the Hrz7 case spine the managed case-engine adapter opens cases on. Empty means
+    #: Base URL of the human-review-console case spine the managed case-engine adapter opens cases
+    #: on. Empty means
     #: the managed adapter refuses: a dispute must not be opened with no case behind it.
     case_url: str = ""
-    #: Base URL of the Doc6 A2A endpoint the managed regulator-response adapter delegates to. Empty
+    #: Base URL of the complaints-review A2A endpoint the managed regulator-response adapter
+    #: delegates to. Empty
     #: means the managed adapter refuses: a regulatory-track dispute must reach the module.
     doc6_url: str = ""
     #: The client-owned reason-code packs (eligibility) and refund-abuse thresholds. Defaults are

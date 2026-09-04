@@ -1,9 +1,9 @@
-"""Local RegulatorResponsePort: a canned, cited regulator draft (no live Doc6).
+"""Local RegulatorResponsePort: a canned, cited regulator draft (no live complaints-review).
 
-Stands in for Doc6's A2A drafting offline so the regulatory-complaint path is demoable. It stamps
-the draft marker and always sets ``requires_human_review``: a regulator response is never sent by
-the system. The managed adapter replaces this with a call to Doc6's own tools; the boundary and
-the review gate are identical.
+Stands in for complaints-review's A2A drafting offline so the regulatory-complaint path is demoable.
+It stamps the draft marker and always sets ``requires_human_review``: a regulator response is never
+sent by the system. The managed adapter replaces this with a call to complaints-review's own tools;
+the boundary and the review gate are identical.
 """
 
 from __future__ import annotations
@@ -39,7 +39,7 @@ class LocalRegulatorResponder:
             citations=(
                 Citation(
                     source_id=f"doc6:local:{dispute_id}",
-                    title="Regulator-response draft (Doc6 module, offline stand-in)",
+                    title="Regulator-response draft (complaints-review module, offline stand-in)",
                     snippet=category,
                 ),
             ),

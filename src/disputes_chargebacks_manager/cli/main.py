@@ -23,7 +23,9 @@ def _add_dispute_args(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("transaction_date", help="ISO date of the transaction.")
     parser.add_argument("intake_date", help="ISO date the dispute was filed.")
     parser.add_argument("--actor", default="cli-user@bank.example")
-    parser.add_argument("--tenant", default="", help="Tenant partition asserted to Hrz7.")
+    parser.add_argument(
+        "--tenant", default="", help="Tenant partition asserted to human-review-console."
+    )
 
 
 def _dispute_from(args: argparse.Namespace) -> Dispute:

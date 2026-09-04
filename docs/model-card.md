@@ -37,7 +37,7 @@ model is a bounded, replaceable component that touches exactly two ports.
   assumed: `eval/run_eval.py` `grounded_score` fails any draft carrying a digit run absent from
   the engine-sourced facts and the cited evidence, at a `0.99` bar.
 - Every representment pack and every regulator draft sets `requires_human_review=True` and carries
-  its citations; nothing auto-posts. Consequential dispositions are ROUTED to Hrz7 in the same call
+  its citations; nothing auto-posts. Consequential dispositions are ROUTED to `human-review-console` in the same call
   that produced them (rule R8), never left in a flag.
 - `pii_safety` is scored two ways (the shared pack scan plus an independent planted-literal
   oracle) at a `0.99` bar, and `tests/unit/test_not_falsely_green.py` proves the metric can go red.
@@ -58,7 +58,7 @@ RAISE, so a placeholder that quietly started returning something would fail the 
 
 - **Pin a model, write the prompts, and finish the managed narration adapter** (P-07, P-11).
   `adapters/gcp/narration.py` raises today. Record the exact model id and version here when it is
-  wired. `eval/run_eval.py` names `gemini-3.5-flash` to the Hrz4 promotion client in `--mode gate`;
+  wired. `eval/run_eval.py` names `gemini-3.5-flash` to the `model-quality-gate` promotion client in `--mode gate`;
   that string is the promotion request's declaration, not a model this repo calls.
 - **Finish the managed document-extraction call.** `CloudDocumentExtractor.extract_raw` builds a
   `ProcessRequest` with no processor resource name, so it cannot succeed against a live Document
@@ -74,12 +74,12 @@ RAISE, so a placeholder that quietly started returning something would fail the 
   the `Citation` set into the audit record's citation list. Redact the fact tuple and the snippets
   before they cross either boundary, as the review payload converter already does.
 - **Prompt-injection screening** (rule R1). There is no `GuardrailPort` in `ports/`. An intake
-  transcript is untrusted text; screen it through the Hrz1 gateway before the model sees it, and
+  transcript is untrusted text; screen it through the `agent-guardrail-gateway` before the model sees it, and
   fail closed to deterministic-only when the screen is unavailable.
 - **Budget, rate and kill switch** (P-10, P-11): a per-tenant token budget, a request rate limit,
   and a switch that forces deterministic-only operation with the model disabled.
 - **Evaluate the live model** (P-08, rule R5). The offline eval scores the deterministic local
-  narrator against the golden oracle. Register the metric bundle with Hrz4 and add a
+  narrator against the golden oracle. Register the metric bundle with `model-quality-gate` and add a
   managed-profile run that scores real classification accuracy and real narration groundedness
   against the same golden cases.
 

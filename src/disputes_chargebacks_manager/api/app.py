@@ -293,7 +293,8 @@ def open_dispute(
     request: OpenDisputeRequest,
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> OpenDisputeResponse:
-    """Assess eligibility and open a case on the Hrz7 spine; an ineligible rejection routes (R8).
+    """Assess eligibility and open a case on the human-review-console spine; an ineligible rejection
+    routes (R8).
 
     The tenant and actor come from the verified principal, never the request body. Eligibility is
     deterministic; a machine rejection is consequential and reaches human sign-off in this call.
@@ -378,7 +379,9 @@ def regulator(
     request: RegulatorRequest,
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> RegulatorResponseModel:
-    """Delegate a regulator response to the Doc6 module with a redacted narrative (review-gated)."""
+    """Delegate a regulator response to the complaints-review module with a redacted narrative
+    (review-gated).
+    """
     service = build_service(_container())
     dispute = request.dispute.to_domain(tenant=principal.tenant)
     draft = service.regulator_response(dispute, actor=principal.actor)

@@ -55,9 +55,9 @@ Redacted, with the shared `pii-kit` and this deployment's jurisdiction row selec
 - before every audit write (`DisputeService._record` redacts the summary);
 - before the intake transcript reaches the narration port, and on the citation snippet the intake
   path keeps;
-- before the dispute narrative reaches the Doc6 regulator-response module;
+- before the dispute narrative reaches the `complaints-review` regulator-response module;
 - before any review payload leaves the process, against EVERY jurisdiction's rows rather than only
-  this deployment's, because the Hrz7 console is a shared sink
+  this deployment's, because the `human-review-console` is a shared sink
   (`adapters/_review_payload.py`);
 - on every string of an agent tool result, however deeply nested, because a tool result becomes a
   model's context (`agent/tools.py`).
@@ -77,8 +77,8 @@ an independent planted-literal check, so a broken pack row cannot silently pass 
 
 ## What about outbound service-to-service calls?
 
-Three, all plain stdlib `urllib` rather than a cloud SDK: the Hrz7 review submission and the Hrz7
-case spine, and the Doc6 A2A regulator-response call. The review path uses the shared
+Three, all plain stdlib `urllib` rather than a cloud SDK: the `human-review-console` review submission and the `human-review-console`
+case spine, and the `complaints-review` A2A regulator-response call. The review path uses the shared
 `review-kit` client, which refuses a plaintext non-loopback URL and a missing bearer at
 construction. Outbound credentials (`HUMAN_REVIEW_S2S_TOKEN`, `HUMAN_REVIEW_S2S_SIGNING_KEY`) are deliberately
 distinct variables from the inbound `DISPUTES_S2S_TOKEN`. Each managed adapter REFUSES when its
@@ -134,15 +134,15 @@ over both locks and `npm audit --audit-level=high` as hard failures.
 
 ## What is explicitly out of scope for this repo?
 
-- **Prompt-injection defence and output filtering** at the model boundary: **Hrz1**. There is no
+- **Prompt-injection defence and output filtering** at the model boundary: `agent-guardrail-gateway`. There is no
   `GuardrailPort` here yet, and an intake transcript is untrusted text (COMPLIANCE rule R1).
-- **The WORM audit store and the shared trace sink**: **Hrz5**. The tracer port exports OTLP to
-  the Hrz5 collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, but the audit record itself does
+- **The WORM audit store and the shared trace sink**: `agent-observability`. The tracer port exports OTLP to
+  the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, but the audit record itself does
   not yet land in the shared sink (rule R2).
-- **The human-review console and the case spine**: **Hrz7**. This repo produces and routes; it
+- **The human-review console and the case spine**: `human-review-console`. This repo produces and routes; it
   does not implement the console.
-- **The agent registry** (**Hrz3**), **the promotion gate** (**Hrz4**), **the knowledge base**
-  (**Hrz2**) and **regulator-response drafting** (**Doc6**).
+- **The agent registry** (`agent-registry`), **the promotion gate** (`model-quality-gate`), **the knowledge base**
+  (`enterprise-knowledge-base`) and **regulator-response drafting** (`complaints-review`).
 - **Object-level authorisation and per-tenant data-tag isolation**: not built, because this
   service has no queryable store yet. The tenant partition is carried on every outbound review.
   Add ACL matchers with the first store (COMPLIANCE cross-cutting row, practices check C2).

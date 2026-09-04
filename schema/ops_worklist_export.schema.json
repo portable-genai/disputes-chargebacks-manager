@@ -50,7 +50,7 @@
     "complaint_signal": {
       "type": "object",
       "additionalProperties": false,
-      "description": "F2's backward-compatible extension: the deterministic intake signal Rgc15 consumes.",
+      "description": "F2's backward-compatible extension: the deterministic intake signal consumer-duty-monitoring consumes.",
       "required": ["category", "eligibility", "severity"],
       "properties": {
         "category": {"type": "string"},

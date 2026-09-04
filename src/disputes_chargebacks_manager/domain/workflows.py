@@ -1,10 +1,11 @@
-"""Dispute lifecycles as Hrz7 case-engine configuration: states, legal moves and clocks.
+"""Dispute lifecycles as human-review-console case-engine configuration: states, legal moves and
+clocks.
 
-These are the ``WorkflowDefinition``s the Hrz7 case engine takes as per-vertical deployment
-configuration (SPEC: F2 slice 2). They are DATA, not code paths: the deterministic
-:mod:`.state_machine` reads them, and the ``case_engine`` port hands them to Hrz7 (platform
-adapter) or computes deadlines from the same ``ClockSpec`` data (local recording adapter). The
-LLM owns nothing here; transition legality, clocks and escalation are wholly deterministic.
+These are the ``WorkflowDefinition``s the human-review-console case engine takes as per-vertical
+deployment configuration (SPEC: F2 slice 2). They are DATA, not code paths: the deterministic
+:mod:`.state_machine` reads them, and the ``case_engine`` port hands them to human-review-console
+(platform adapter) or computes deadlines from the same ``ClockSpec`` data (local recording adapter).
+The LLM owns nothing here; transition legality, clocks and escalation are wholly deterministic.
 
 Two tracks ship: card-scheme (banking chargebacks, with representment / pre-arbitration /
 arbitration) and retail buyer-dispute (refund-oriented, shorter). A deployment adds a third by

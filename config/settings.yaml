@@ -45,11 +45,11 @@ iap_audience: ${DISPUTES_IAP_AUDIENCE:-}
 # deliberately distinct from this service's own inbound DISPUTES_S2S_TOKEN.
 review_url: ${HUMAN_REVIEW_URL:-}
 
-# The Hrz7 case-spine endpoint the managed case-engine adapter opens cases on. Empty (the default)
+# The human-review-console case-spine endpoint the managed case-engine adapter opens cases on. Empty (the default)
 # means the managed adapter REFUSES: a dispute must not be opened with no case behind it.
 case_url: ${CASE_URL:-}
 
-# The Doc6 A2A endpoint the managed regulator-response adapter delegates to (Doc6 stays its own
+# The complaints-review A2A endpoint the managed regulator-response adapter delegates to (complaints-review stays its own
 # repo). Empty (the default) means the managed adapter REFUSES: a regulatory-track dispute must
 # reach the regulator-response module rather than silently skipping it.
 doc6_url: ${DOC6_A2A_URL:-}
@@ -75,7 +75,7 @@ adapters:
     onprem: disputes_chargebacks_manager.adapters.onprem.review_router:OnPremReviewRouter
 
   # Tracing. Which BACKEND a deployed profile exports to is not a binding: the gcp
-  # adapter reads OTEL_EXPORTER_OTLP_ENDPOINT and sends OTLP to the Hrz5 collector when it
+  # adapter reads OTEL_EXPORTER_OTLP_ENDPOINT and sends OTLP to the agent-observability collector when it
   # is set, straight to Cloud Trace when it is not. Tracing is not essential to
   # correctness, so onprem is ABSENT rather than fatal, unlike the other placeholders.
   tracer:
@@ -83,7 +83,7 @@ adapters:
     gcp: disputes_chargebacks_manager.adapters.gcp.tracer:CloudTracerAdapter
     onprem: disputes_chargebacks_manager.adapters.onprem.tracer:OnPremTracerAdapter
 
-  # The promotion authority (Hrz4). The local adapter scores offline but REFUSES to
+  # The promotion authority (model-quality-gate). The local adapter scores offline but REFUSES to
   # promote: a promotion certified by a laptop with no quality service is certified by
   # nothing.
   evaluation:

@@ -24,8 +24,8 @@ gate on the domain's import surface.
   `ClockSpec` data, a scripted intake channel, a stdlib evidence parser, a deterministic narrator
   and a review outbox that actually enqueues. This is the dev, test, CI and demo default and the
   working proof that the domain runs entirely off-cloud.
-- **`gcp`** is the managed stack: Cloud Logging WORM, IAP identity, Hrz7 over S2S for reviews and
-  the case spine, Doc6 over A2A, Document AI, Dialogflow CX, Vertex AI, OpenTelemetry. Every cloud
+- **`gcp`** is the managed stack: Cloud Logging WORM, IAP identity, `human-review-console` over S2S for reviews and
+  the case spine, `complaints-review` over A2A, Document AI, Dialogflow CX, Vertex AI, OpenTelemetry. Every cloud
   import is LAZY, inside the method, so the other two profiles import these modules with no SDK
   installed.
 - **`onprem`** is the exit scaffold: placeholders that satisfy the same Protocols and RAISE
