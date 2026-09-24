@@ -9,6 +9,7 @@ from __future__ import annotations
 import argparse
 import sys
 
+from ..adapters.controls import RecordingReviewRouter
 from ..config import build_container, build_service
 from ..domain.kernel import parse_date
 from ..domain.models import CustomerHistory, Dispute, DisputeTrack
@@ -61,7 +62,10 @@ def main(argv: list[str] | None = None) -> int:
     intake_cmd.add_argument("--tenant", default="")
 
     args = parser.parse_args(argv)
-    service = build_service(build_container())
+    container = build_container()
+    # Rule R8 on the CLI path too: every routed outcome prints what happened to its hand-off.
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
 
     if args.command == "open":
         result = service.open_dispute(
@@ -71,8 +75,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{args.dispute_id}: eligible={result.eligibility.eligible} state={state}")
         for reason in result.eligibility.reasons:
             print(f"  reason: {reason}")
-        if result.review_ref:
-            print(f"  routed to human review: {result.review_ref}")
+        print(f"  human review hand-off : {routing.outcome.value} {result.review_ref}".rstrip())
         return 0
 
     if args.command == "abuse":
@@ -85,16 +88,14 @@ def main(argv: list[str] | None = None) -> int:
         a = decision.assessment
         print(f"{args.dispute_id}: {a.outcome.value} (score {a.score})")
         print(f"  signals: {', '.join(a.signals)}")
-        if decision.review_ref:
-            print(f"  routed to human review: {decision.review_ref}")
+        print(f"  human review hand-off : {routing.outcome.value} {decision.review_ref}".rstrip())
         return 0
 
     if args.command == "intake":
         result = service.intake(args.conversation_ref, tenant=args.tenant, actor=args.actor)
         c = result.classification
         print(f"{args.conversation_ref}: {c.category.value} (opened={result.opened})")
-        if result.review_ref:
-            print(f"  routed to human review: {result.review_ref}")
+        print(f"  human review hand-off : {routing.outcome.value} {result.review_ref}".rstrip())
         return 0
 
     return 2  # pragma: no cover - argparse requires a subcommand

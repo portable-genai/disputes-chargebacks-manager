@@ -12,10 +12,11 @@ abuse REVIEW or DENY, a representment draft, a regulator draft, an unclassifiabl
 intake) sets `requires_human_review` AND is routed to the `human-review-console` in the SAME
 call that produced it, through the shared `review-kit` (dependency rule R8). The flag alone
 is not the escalation, and `tests/unit/test_review_routing.py` asserts the ROUTING rather than the
-flag on the API, CLI and agent paths alike. A CRITICAL band demands two approvals. The managed
-router refuses to run with no console configured rather than swallowing an escalation, and
-Terraform makes `human_review_url` required whenever the serving edge is enabled, so a deploy that
-would ship R8 unwired fails at plan time.
+flag on the API, CLI and agent paths alike. A CRITICAL band demands two approvals. Under the
+managed profile, routing on with no console configured refuses at boot, a hand-off that fails at
+request time is reported as `review_routing: "failed"` rather than read as reviewed, and Terraform
+makes `human_review_url` required whenever the serving edge is enabled with routing on, so a
+deploy that would ship R8 unwired fails at plan time.
 
 ### Can a decision be reconstructed by a reviewer?
 

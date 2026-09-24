@@ -40,7 +40,9 @@ wins.
 
 from __future__ import annotations
 
+import functools
 import importlib
+import logging
 import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -56,7 +58,7 @@ from .domain.abuse_engine import AbusePolicy
 from .domain.eligibility_engine import ReasonCodePack, ReasonCodeRule
 from .domain.models import DisputeTrack
 from .domain.policy_defaults import DEFAULT_ABUSE_POLICY, DEFAULT_REASON_CODE_PACKS
-from .envread import setting_or_default
+from .envread import boolean_setting, setting_or_default
 from .ports.audit import AuditSinkPort
 from .ports.case_engine import CaseEnginePort
 from .ports.conversation_channel import ConversationChannelPort
@@ -481,6 +483,29 @@ def _abuse_policy_from(raw: object) -> AbusePolicy:
     return AbusePolicy(**{str(k): int(v) for k, v in raw.items()})
 
 
+#: The switch for review routing, the one cheap runtime control this service has, read in three
+#: states: unset is ON (the reference posture keeps cheap controls on), a boolean value wins, and
+#: an emptied or unrecognised value refuses at boot. See the fleet's runtime-control contract.
+REVIEW_ROUTING_ENV = "DISPUTES_REVIEW_ROUTING"
+
+_log = logging.getLogger(__name__)
+
+
+@dataclass(frozen=True, slots=True)
+class ControlSwitches:
+    """Which cheap runtime controls this process runs. Every one defaults on."""
+
+    review_routing: bool = True
+
+    @classmethod
+    def from_env(cls) -> ControlSwitches:
+        return cls(review_routing=boolean_setting(REVIEW_ROUTING_ENV, default=True))
+
+    def switched_off(self) -> tuple[str, ...]:
+        """The environment variables of every control that is off, for the startup warning."""
+        return () if self.review_routing else (REVIEW_ROUTING_ENV,)
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     """Deployment settings, resolved from the settings file and the environment."""
@@ -496,6 +521,8 @@ class Settings:
     audit_anchor_path: str = ""
     #: Base URL of the human-review-console Human-Review console the R8 producer path submits to.
     review_url: str = ""
+    #: Which cheap runtime controls run; see :class:`ControlSwitches`.
+    controls: ControlSwitches = field(default_factory=ControlSwitches)
     #: The audience the managed IAP identity adapter verifies the signed assertion AGAINST: the
     #: IAP-protected resource, ``/projects/<NUM>/global/backendServices/<ID>`` behind an HTTPS
     #: load balancer. It is CONFIGURATION rather than a literal because it is per-deployment, and
@@ -604,7 +631,7 @@ class Settings:
         data = _read_settings_file(path)
         choice = resolve_profile()
         packs, abuse_policy = load_policy()
-        return cls(
+        settings = cls(
             profile=choice.profile,
             profile_explicit=choice.explicit,
             region=str(data.get("region") or _REGION),
@@ -619,6 +646,25 @@ class Settings:
             reason_code_packs=packs,
             abuse_policy=abuse_policy,
             adapters=_bindings_from(data),
+            controls=ControlSwitches.from_env(),
+        )
+        _refuse_unconfigured_controls(settings)
+        return settings
+
+
+def _refuse_unconfigured_controls(settings: Settings) -> None:
+    """Review routing on under the managed profile must name its console, checked at boot.
+
+    The managed router used to discover a missing ``review_url`` on the first escalation and
+    fail that request; the configuration error belongs at startup, with the two ways out.
+    """
+    if settings.profile not in _MANAGED_PROFILES:
+        return
+    if settings.controls.review_routing and not settings.review_url.strip():
+        raise ConfiguredEmptyError(
+            f"Review routing is on under profile {settings.profile!r} but HUMAN_REVIEW_URL "
+            f"(config/settings.yaml review_url) is not set. Name the human-review-console base "
+            f"URL, or set {REVIEW_ROUTING_ENV}=off to run without routing."
         )
 
 
@@ -649,6 +695,10 @@ class Container:
 
     @cached_property
     def review_router(self) -> ReviewRouterPort:
+        if not self.settings.controls.review_routing:
+            from .adapters.controls import DisabledReviewRouter
+
+            return DisabledReviewRouter(self.settings)
         adapter = self._bind("review_router")
         assert isinstance(adapter, ReviewRouterPort)
         return adapter
@@ -696,12 +746,32 @@ class Container:
         return adapter
 
 
+@functools.cache
+def warn_switched_off(switched_off: tuple[str, ...]) -> None:
+    """Log a switched-off posture once per process, however many containers are built.
+
+    The agent tools build a container per tool call, so a warning in :func:`build_container`
+    itself would repeat on every call and drown the one line an operator needs to see.
+    """
+    _log.warning("runtime controls switched off: %s", ", ".join(switched_off))
+
+
 def build_container(settings: Settings | None = None) -> Container:
-    return Container(settings or Settings.load())
+    settings = settings or Settings.load()
+    switched_off = settings.controls.switched_off()
+    if switched_off:
+        warn_switched_off(switched_off)
+    return Container(settings)
 
 
-def build_service(container: Container) -> Any:
+def build_service(container: Container, *, routing: Any = None) -> Any:
     """Construct the dispute orchestrator wired to the container's bound adapter family.
+
+    ``routing`` is the caller's ``adapters.controls.RecordingReviewRouter`` around the bound
+    review router. A surface that returns a routed outcome passes one and reports its outcome
+    (``review_routing``): the wrapper turns a failed hand-off into ``failed`` and a logged
+    warning rather than a failed request, so the domain stays unchanged and the caller still
+    says what happened. Without one, the bound router is used directly.
 
     Returns a ``domain.dispute_service.DisputeService``; typed as ``Any`` here so this composition
     root does not import the domain service at module load (the domain imports the port Protocols,
@@ -712,7 +782,7 @@ def build_service(container: Container) -> Any:
     settings = container.settings
     return DisputeService(
         audit=container.audit,
-        review_router=container.review_router,
+        review_router=routing if routing is not None else container.review_router,
         case_engine=container.case_engine,
         narration=container.narration,
         document_extraction=container.document_extraction,

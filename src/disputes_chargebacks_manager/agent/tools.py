@@ -21,6 +21,7 @@ from typing import TYPE_CHECKING, Any
 from hex_service_kit.serialization import to_jsonable
 from pii_kit import redact
 
+from ..adapters.controls import RecordingReviewRouter
 from ..config import Container, Settings, build_container, build_service
 from ..domain.kernel import parse_date
 from ..domain.models import CustomerHistory, Dispute, DisputeTrack
@@ -85,9 +86,12 @@ def open_dispute(
 
     Returns:
       A JSON-safe result: the eligibility verdict, the opened case state and deadlines, and
-      ``review_ref`` (where an ineligible rejection was routed; empty when eligible).
+      ``review_ref`` (where an ineligible rejection was routed; empty unless routed), and
+      ``review_routing``: routed, failed, off or not_required.
     """
-    service = build_service(_container(settings))
+    container = _container(settings)
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     dispute = Dispute(
         id=dispute_id,
         tenant=tenant,
@@ -103,6 +107,7 @@ def open_dispute(
     payload["state"] = result.case.state.value
     payload["requires_human_review"] = result.disposition.requires_human_review
     payload["review_ref"] = result.review_ref
+    payload["review_routing"] = routing.outcome.value
     return payload
 
 
@@ -125,9 +130,12 @@ def assess_refund_abuse(
 
     Returns:
       A JSON-safe result: the outcome, the transparent score and firing signals, and
-      ``review_ref`` (where a consequential outcome was routed; empty for ALLOW).
+      ``review_ref`` (where a consequential outcome was routed; empty unless routed), and
+      ``review_routing``: routed, failed, off or not_required.
     """
-    service = build_service(_container(settings))
+    container = _container(settings)
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     dispute = Dispute(
         id=dispute_id,
         tenant=tenant,
@@ -147,6 +155,7 @@ def assess_refund_abuse(
     payload = _as_dict(decision.assessment)
     payload["requires_human_review"] = decision.disposition is not None
     payload["review_ref"] = decision.review_ref
+    payload["review_routing"] = routing.outcome.value
     return payload
 
 
@@ -160,13 +169,17 @@ def classify_intake(
 
     Returns:
       A JSON-safe result: the category, whether it opens a lifecycle case, and ``review_ref``
-      (where an unclassifiable or regulatory intake was routed; empty when it opened).
+      (where an unclassifiable or regulatory intake was routed; empty unless routed), and
+      ``review_routing``: routed, failed, off or not_required.
     """
-    service = build_service(_container(settings))
+    container = _container(settings)
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     result = service.intake(conversation_ref, tenant=tenant, actor=actor)
     payload = _as_dict(result.classification)
     payload["opened"] = result.opened
     payload["review_ref"] = result.review_ref
+    payload["review_routing"] = routing.outcome.value
     return payload
 
 

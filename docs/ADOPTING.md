@@ -146,7 +146,7 @@ which are actually wired today: the table below matches the `adapters:` block in
 
 | Concern | Owned by | Wired here today? |
 |---|---|---|
-| Human review and maker-checker console | `human-review-console` | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HUMAN_REVIEW_URL`) and REFUSES when no console is configured. Rule R8. |
+| Human review and maker-checker console | `human-review-console` | **Yes.** `ports/review_router.py` with an adapter in all three families; the managed one submits over S2S to `review_url` (`HUMAN_REVIEW_URL`), and with routing on the managed profile refuses to boot without one (`DISPUTES_REVIEW_ROUTING=off` is the stated way to run without routing). Rule R8. |
 | Case spine (cases, states, clocks) | `human-review-console` | **Yes.** `ports/case_engine.py`; the managed adapter drives `/v1/cases` at `case_url` (`CASE_URL`) and refuses when unset. The offline adapter computes the same deadlines from the same `ClockSpec` data. |
 | Regulator-response drafting for a regulatory-track complaint | `complaints-review` (`complaints-review`) | **Yes.** `ports/regulator_response.py`; the managed adapter calls `complaints-review`'s A2A tools at `doc6_url` (`DOC6_A2A_URL`) and refuses when unset, so a regulatory complaint cannot silently skip that module. |
 | Tracing and the immutable audit sink | `agent-observability` | **Partly.** The tracer port is bound in all three families and the managed adapter exports OTLP to the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set (Cloud Trace when it is not). The audit half is still local (hash-chained and anchored) or Cloud Logging; COMPLIANCE rule R2 carries the open half. |
