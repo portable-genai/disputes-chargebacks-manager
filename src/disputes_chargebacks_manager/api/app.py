@@ -67,6 +67,7 @@ from hex_service_kit.web import (
     make_require_service_caller,
 )
 
+from ..adapters.controls import RecordingReviewRouter
 from ..config import (
     LOCAL_PROFILE,
     Container,
@@ -299,7 +300,11 @@ def open_dispute(
     The tenant and actor come from the verified principal, never the request body. Eligibility is
     deterministic; a machine rejection is consequential and reaches human sign-off in this call.
     """
-    service = build_service(_container())
+    container = _container()
+    # The hand-off never fails an already-decided, already-audited outcome; the response says
+    # what happened to it instead (the fleet's runtime-control contract).
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     dispute = request.dispute.to_domain(tenant=principal.tenant)
     result = service.open_dispute(dispute, actor=principal.actor, as_of=parse_date(request.as_of))
     d = result.disposition
@@ -316,6 +321,7 @@ def open_dispute(
         ],
         requires_human_review=d.requires_human_review,
         review_ref=result.review_ref,
+        review_routing=routing.outcome.value,
         citations=[
             {"source_id": c.source_id, "title": c.title, "snippet": c.snippet}  # type: ignore[misc]
             for c in result.eligibility.citations
@@ -329,10 +335,16 @@ def assess_abuse(
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> AbuseResponse:
     """Score refund abuse; a DENY or REVIEW is consequential and routed to sign-off (R8)."""
-    service = build_service(_container())
+    container = _container()
+    # The hand-off never fails an already-decided, already-audited outcome; the response says
+    # what happened to it instead (the fleet's runtime-control contract).
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     dispute = request.dispute.to_domain(tenant=principal.tenant)
     decision = service.assess_abuse(dispute, request.history.to_domain(), actor=principal.actor)
-    return AbuseResponse.from_domain(decision, review_ref=decision.review_ref)
+    return AbuseResponse.from_domain(
+        decision, review_ref=decision.review_ref, review_routing=routing.outcome.value
+    )
 
 
 @app.post("/v1/intake", response_model=IntakeResponse, tags=["disputes"])
@@ -341,7 +353,11 @@ def intake(
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> IntakeResponse:
     """Classify an intake into the closed set; unclassifiable or regulatory fails closed to R8."""
-    service = build_service(_container())
+    container = _container()
+    # The hand-off never fails an already-decided, already-audited outcome; the response says
+    # what happened to it instead (the fleet's runtime-control contract).
+    routing = RecordingReviewRouter(container.review_router)
+    service = build_service(container, routing=routing)
     result = service.intake(
         request.conversation_ref, tenant=principal.tenant, actor=principal.actor
     )
@@ -354,6 +370,7 @@ def intake(
         reasons=list(c.reasons),
         requires_human_review=result.disposition is not None,
         review_ref=result.review_ref,
+        review_routing=routing.outcome.value,
         citations=[
             {"source_id": x.source_id, "title": x.title, "snippet": x.snippet}  # type: ignore[misc]
             for x in c.citations

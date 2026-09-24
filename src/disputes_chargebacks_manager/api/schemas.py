@@ -8,6 +8,8 @@ tenant or the actor: both come from the verified principal in ``api/app.py``.
 
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import BaseModel
 
 from ..domain.dispute_service import AbuseDecision as _AbuseDecisionResult
@@ -91,6 +93,9 @@ class OpenDisputeResponse(BaseModel):
     deadlines: list[DeadlineModel]
     requires_human_review: bool
     review_ref: str = ""
+    #: What happened to the hand-off: routed, failed, off or not_required. ``failed`` means the
+    #: outcome is NOT queued for review, and the console says so.
+    review_routing: Literal["routed", "failed", "off", "not_required"] = "not_required"
     citations: list[CitationModel] = []
 
 
@@ -119,10 +124,19 @@ class AbuseResponse(BaseModel):
     signals: list[str]
     requires_human_review: bool
     review_ref: str = ""
+    #: What happened to the hand-off: routed, failed, off or not_required. ``failed`` means the
+    #: outcome is NOT queued for review, and the console says so.
+    review_routing: Literal["routed", "failed", "off", "not_required"] = "not_required"
     citations: list[CitationModel] = []
 
     @classmethod
-    def from_domain(cls, decision: _AbuseDecisionResult, *, review_ref: str) -> AbuseResponse:
+    def from_domain(
+        cls,
+        decision: _AbuseDecisionResult,
+        *,
+        review_ref: str,
+        review_routing: str = "not_required",
+    ) -> AbuseResponse:
         a = decision.assessment
         return cls(
             dispute_id=a.dispute_id,
@@ -131,6 +145,7 @@ class AbuseResponse(BaseModel):
             signals=list(a.signals),
             requires_human_review=decision.disposition is not None,
             review_ref=review_ref,
+            review_routing=review_routing,  # type: ignore[arg-type]
             citations=_citations(a.citations),
         )
 
@@ -147,6 +162,9 @@ class IntakeResponse(BaseModel):
     reasons: list[str]
     requires_human_review: bool
     review_ref: str = ""
+    #: What happened to the hand-off: routed, failed, off or not_required. ``failed`` means the
+    #: outcome is NOT queued for review, and the console says so.
+    review_routing: Literal["routed", "failed", "off", "not_required"] = "not_required"
     citations: list[CitationModel] = []
 
 

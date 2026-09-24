@@ -58,8 +58,9 @@ runs on the deterministic local narrator. See [`../model-card.md`](../model-card
 No. Every consequential outcome sets `requires_human_review` AND is ROUTED to the `human-review-console` in
 the same call that produced it (rule R8), with the payload redacted before the wire and the
 verified principal threaded as maker; a CRITICAL band demands two approvals. The response carries
-a `review_ref`, so a caller can tell a routed escalation from one that stopped here, and the
-managed router REFUSES when no console is configured rather than swallowing the escalation.
+a `review_ref` and a `review_routing` (`routed`, `failed`, `off`, `not_required`), so a caller can
+tell a routed escalation from one that stopped here, and under the managed profile routing on
+with no console configured refuses at boot.
 Representment packs and regulator drafts are marked draft and never sent. The agent proposes; a
 human disposes.
 
