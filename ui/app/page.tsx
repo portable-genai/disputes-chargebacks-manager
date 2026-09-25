@@ -28,6 +28,33 @@ function reviewRoutingOf(body: string): string | undefined {
   }
 }
 
+// A fictional card-scheme dispute the local profile answers: reason code 10.4 filed nine days after
+// the transaction, inside its 120-day window. It is edited as JSON because the API takes it nested,
+// and the tenant is never part of it: the server takes that from the verified principal.
+const DEFAULT_DISPUTE = {
+  id: "DSP-DEMO-1001",
+  track: "card_scheme",
+  reason_code: "10.4",
+  amount_minor: 42000,
+  currency: "SGD",
+  transaction_date: "2025-05-01",
+  intake_date: "2025-05-10",
+  product: "credit_card",
+  market: "SG",
+  channel: "app",
+  customer_ref: "CUST-DEMO-1",
+  merchant_ref: "MERCH-DEMO-9",
+  narrative: "Cardholder reports a charge they did not make at an online shop (fictional)",
+};
+
+// What the console can do with the one dispute, each a route the service serves.
+const ACTIONS = [
+  { id: "open", label: "Open the dispute (eligibility, lifecycle state, deadlines)" },
+  { id: "abuse", label: "Score refund abuse" },
+  { id: "representment", label: "Draft a representment pack" },
+  { id: "regulator", label: "Draft a regulator response" },
+];
+
 interface CardSummary {
   name?: string;
   description?: string;
@@ -36,8 +63,9 @@ interface CardSummary {
 
 export default function Home() {
   const [persona, setPersona] = useState(PERSONAS[0]);
-  const [subject, setSubject] = useState("Acme Holdings (FICTIONAL)");
-  const [text, setText] = useState("urgent data breach reported by the branch");
+  const [action, setAction] = useState(ACTIONS[0].id);
+  const [disputeText, setDisputeText] = useState(JSON.stringify(DEFAULT_DISPUTE, null, 2));
+  const [asOf, setAsOf] = useState("2025-05-12");
   const [result, setResult] = useState("");
   const [failed, setFailed] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -57,16 +85,52 @@ export default function Home() {
     };
   }, []);
 
+  // One plain call per action, so each request shape can be read off the source and held against
+  // the API. Only opening takes an as-of date; the other three take the dispute alone.
+  function send(dispute: unknown): Promise<Response> {
+    const headers = { "Content-Type": "application/json", "X-Dev-Persona": persona };
+    if (action === "abuse") {
+      return fetch(API + "/v1/disputes/abuse", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ dispute }),
+      });
+    }
+    if (action === "representment") {
+      return fetch(API + "/v1/disputes/representment", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ dispute }),
+      });
+    }
+    if (action === "regulator") {
+      return fetch(API + "/v1/disputes/regulator", {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ dispute }),
+      });
+    }
+    return fetch(API + "/v1/disputes/open", {
+      method: "POST",
+      headers,
+      body: JSON.stringify({ dispute, as_of: asOf }),
+    });
+  }
+
   async function submit(event: React.FormEvent) {
     event.preventDefault();
+    let dispute: unknown;
+    try {
+      dispute = JSON.parse(disputeText);
+    } catch (error) {
+      setFailed(true);
+      setResult("The dispute is not valid JSON: " + String(error));
+      return;
+    }
     setBusy(true);
     setFailed(false);
     try {
-      const response = await fetch(API + "/v1/triage", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "X-Dev-Persona": persona },
-        body: JSON.stringify({ subject, text }),
-      });
+      const response = await send(dispute);
       const body = await response.text();
       setFailed(!response.ok);
       setResult(body);
@@ -83,7 +147,7 @@ export default function Home() {
       <h1>{card?.name ?? "Agent console"}</h1>
       <p className="sub">
         {card?.description ??
-          "Submit a case. The decision is deterministic, cited, and routed to a human reviewer when it escalates."}
+          "Open a dispute. The decision is deterministic, cited, and routed to a human reviewer when it escalates."}
       </p>
 
       <form onSubmit={submit}>
@@ -102,17 +166,33 @@ export default function Home() {
         </fieldset>
 
         <fieldset>
-          <legend>The case</legend>
+          <legend>The dispute</legend>
           <label>
-            Subject
-            <input value={subject} onChange={(event) => setSubject(event.target.value)} />
+            Action
+            <select value={action} onChange={(event) => setAction(event.target.value)}>
+              {ACTIONS.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+            </select>
           </label>
           <label>
-            Description
-            <textarea value={text} onChange={(event) => setText(event.target.value)} />
+            Dispute (JSON; the tenant comes from your persona, not from this field)
+            <textarea
+              rows={16}
+              value={disputeText}
+              onChange={(event) => setDisputeText(event.target.value)}
+            />
           </label>
+          {action === "open" ? (
+            <label>
+              Assess as of
+              <input type="date" value={asOf} onChange={(event) => setAsOf(event.target.value)} />
+            </label>
+          ) : null}
           <button type="submit" disabled={busy}>
-            {busy ? "Working" : "Triage this case"}
+            {busy ? "Working" : "Run on this dispute"}
           </button>
         </fieldset>
       </form>

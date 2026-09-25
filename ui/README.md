@@ -158,7 +158,7 @@ assertion, and this UI discards those.
 | `lib/server/identity.ts` | The only place an actor is decided. Never reads a browser-supplied value except the validated dev persona. |
 | `app/api/agent/[...path]/route.ts` | The same-origin reverse proxy: strip, resolve, forward, answer. |
 | `proxy.ts` | The document-layer header baseline on every response. |
-| `app/page.tsx` | The console itself. It reads the service's agent card for its own title, so no product name is hardcoded here. |
+| `app/page.tsx` | The console itself. It reads the service's agent card for its own title, so no product name is hardcoded here. It edits one fictional dispute as JSON and posts it to the route the chosen action names: `POST /v1/disputes/open` (with an as-of date), `/v1/disputes/abuse`, `/v1/disputes/representment` or `/v1/disputes/regulator`. `tests/unit/test_console_matches_api.py` holds every call against the live route table. |
 | `tests/` | Node tests for the policy modules, plus the scanner that fails the build on a two-state environment read anywhere in `ui/`. No browser engine, so they run anywhere. |
 
 ## Bounds of this UI
