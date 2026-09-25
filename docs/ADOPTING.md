@@ -134,8 +134,9 @@ Markdown is left alone; the script deliberately does NOT touch the human decisio
    (`var.enable_vpc_sc`, `var.vpc_sc_enforce`), the locked WORM log bucket
    (`var.worm_locked`, and note the lock is irreversible) and the loopback-by-default API bind.
    Decide the WORM retention (`var.retention_days`, minimum 180) before the first apply.
-   `var.human_review_url` is REQUIRED once the serving edge is enabled, because the managed review
-   router refuses rather than swallowing an escalation.
+   `var.human_review_url` is REQUIRED once the serving edge is enabled with
+   `review_routing_enabled` on, because the service refuses to boot with routing on and no console
+   named; `review_routing_enabled = false` (`DISPUTES_REVIEW_ROUTING=off`) needs none.
 
 ## 5. Do not duplicate the platform
 
