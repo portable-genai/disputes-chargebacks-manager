@@ -9,7 +9,9 @@ needs a floor to check against.
 
 from __future__ import annotations
 
-from ...config import Settings
+from hex_service_kit import provenance
+
+from ...config import LOCAL_STUB_MODEL, Settings
 
 #: Keyword -> the category label to prefer. First match in this order wins, so a transcript that
 #: mentions several is classified by the strongest signal.
@@ -35,6 +37,8 @@ class LocalNarrator:
         self._settings = settings
 
     def classify(self, text: str, *, categories: tuple[str, ...]) -> str:
+        # The stub answered: the pill names it, exactly as ``generator_model`` does under local.
+        provenance.note_model(LOCAL_STUB_MODEL)
         lowered = text.lower()
         for keyword, label in _KEYWORDS:
             if keyword in lowered and label in categories:
@@ -42,5 +46,6 @@ class LocalNarrator:
         return ""
 
     def narrate(self, *, instruction: str, facts: tuple[tuple[str, str], ...]) -> str:
+        provenance.note_model(LOCAL_STUB_MODEL)
         rendered = "; ".join(f"{k}: {v}" for k, v in facts)
         return f"{instruction} Based on the case record ({rendered})."
