@@ -18,6 +18,7 @@ from .audit import AuditSinkPort
 from .case_engine import CaseEnginePort
 from .conversation_channel import ConversationChannelPort
 from .document_extraction import DocumentExtractionPort
+from .guardrail import GuardrailPort
 from .identity import (
     CLIENT_ASSERTED,
     END_USER_AUTH_ATTR,
@@ -39,6 +40,7 @@ from .review_router import ReviewRouterPort
 #: port name (the key in the settings ``adapters:`` block) -> the Protocol it must satisfy.
 PORT_PROTOCOLS: dict[str, type] = {
     "audit": AuditSinkPort,
+    "guardrail": GuardrailPort,
     "identity": IdentityPort,
     "review_router": ReviewRouterPort,
     "case_engine": CaseEnginePort,
@@ -65,6 +67,7 @@ __all__ = [
     "ConversationChannelPort",
     "DocumentExtractionPort",
     "EndUserAuthUnavailableError",
+    "GuardrailPort",
     "IdentityPort",
     "NarrationPort",
     "RegulatorResponsePort",

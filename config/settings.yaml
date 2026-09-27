@@ -55,6 +55,18 @@ case_url: ${CASE_URL:-}
 # reach the regulator-response module rather than silently skipping it.
 doc6_url: ${DOC6_A2A_URL:-}
 
+# Rule R1: the Model Armor template the `gcp` guardrail adapter screens every generation call's
+# input and output through, and the regional host it calls (never the global endpoint, P-05).
+# `template_id` matches the template `infra/terraform/model_armor.tf` creates, so a zero-edit
+# deployment names a template its own Terraform provisions. Guardrail on (DISPUTES_GUARDRAIL,
+# unset means on) under the managed profile REFUSES TO BOOT when template_id is empty and the
+# bound adapter is ModelArmorGuardrailAdapter; DISPUTES_GUARDRAIL=off states the guardrail off.
+model_armor:
+  template_id: ${DISPUTES_MODEL_ARMOR_TEMPLATE:-disputes-chargebacks-manager-guardrail}
+  host: ${DISPUTES_MODEL_ARMOR_HOST:-modelarmor.asia-southeast1.rep.googleapis.com}
+  # The deadline on every sanitize call. A timeout fails CLOSED (audited, then refused).
+  timeout_seconds: 10.0
+
 # The per-port adapter map: the ONLY place a binding lives, so switching the whole stack is a
 # configuration change rather than a code edit. Every port must bind every profile; the loader
 # refuses a partial block and `tests/test_settings_file.py` fails the build if this drifts from
@@ -66,6 +78,12 @@ adapters:
     local: disputes_chargebacks_manager.adapters.local.audit:LocalAuditAdapter
     gcp: disputes_chargebacks_manager.adapters.gcp.audit:CloudAuditAdapter
     onprem: disputes_chargebacks_manager.adapters.onprem.audit:OnPremAuditAdapter
+  # Rule R1: screens every generation call's input (before) and output (after). local is a
+  # deterministic heuristic stand-in; there is no offline emulator for Model Armor.
+  guardrail:
+    local: disputes_chargebacks_manager.adapters.local.guardrail:LocalHeuristicGuardrailAdapter
+    gcp: disputes_chargebacks_manager.adapters.gcp.guardrail:ModelArmorGuardrailAdapter
+    onprem: disputes_chargebacks_manager.adapters.onprem.guardrail:OnPremGuardrailAdapter
   identity:
     local: disputes_chargebacks_manager.adapters.local.identity:LocalIdentityAdapter
     gcp: disputes_chargebacks_manager.adapters.gcp.identity:IapIdentityAdapter

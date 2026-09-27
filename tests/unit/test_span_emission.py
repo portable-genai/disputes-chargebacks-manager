@@ -55,6 +55,7 @@ def _service(tracer: _RecordingTracer) -> DisputeService:
         review_router=container.review_router,
         case_engine=container.case_engine,
         narration=container.narration,
+        guardrail=container.guardrail,
         document_extraction=container.document_extraction,
         conversation_channel=container.conversation_channel,
         regulator_response=container.regulator_response,

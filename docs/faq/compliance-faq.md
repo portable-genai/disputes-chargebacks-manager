@@ -97,8 +97,6 @@ today are:
 
 - **P-05 and R3 (grounding, knowledge base)**: no retrieval port and nothing grounded against
   `enterprise-knowledge-base`. Deliberately unclaimed rather than asserted.
-- **R1 (guardrail)**: no `GuardrailPort`. Injection defence and output filtering at the model
-  boundary are `agent-guardrail-gateway`'s job and are not wired.
 - **R2 (shared audit and trace sink)**: spans reach the `agent-observability` collector when the OTLP endpoint is
   set; the audit record does not land in the shared sink.
 - **R4 (agent registry)**: the A2A card is published but not registered with `agent-registry`.

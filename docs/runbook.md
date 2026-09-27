@@ -153,6 +153,45 @@ carries `review_routing: "failed"` and an empty reference, the failure is logged
 console says the item is not queued for review. Terraform states the switch as
 `review_routing_enabled`.
 
+## Guardrail (rule R1)
+
+`ports/guardrail.py` screens every generation call this service makes, in both directions
+(`domain/dispute_service.py`):
+
+- `intake` (the classifier): the conversation reference and the redacted transcript INPUT, the
+  label OUTPUT;
+- `draft_representment` (the narrator): the dispute id and each evidence document's id and text
+  INPUT, then the prompt the narrator reads as sent, and the draft OUTPUT;
+- `regulator_response` (complaints-review drafts it with its own model): the dispute id, the
+  category and the redacted narrative INPUT, then the request as sent, and the returned draft
+  OUTPUT.
+
+Each screen's `sanitized_text` is the text used from then on, exactly as given; a joined prompt
+that crosses its port as structured fields cannot take a rewrite back, so a rewritten one
+refuses. Under `gcp` the guardrail calls a regional Model Armor template (`config/settings.yaml`
+`model_armor.template_id`, on the regional host `model_armor.host`, never the global endpoint);
+`infra/terraform/model_armor.tf` creates that template, gated on
+`var.model_armor_full_capabilities` for the malicious-URI filter and multi-language detection,
+which not every region serves: `asia-southeast1` refuses the malicious-URI filter, so a
+deployment there sets `model_armor_full_capabilities = false` (see `terraform.tfvars.example`).
+
+The managed guardrail fails CLOSED. It allows only on an explicit `NO_MATCH_FOUND` from a screen
+where every filter ran (`invocation_result` `SUCCESS`); a match, an absent or undecided result, a
+`PARTIAL` or `FAILURE` screen (a filter skipped for size or language, or erroring, reports no
+match), and any API error all refuse, and every call carries a deadline
+(`model_armor.timeout_seconds`, 10 s by default) so a stalled backend refuses rather than hangs.
+A blocked direction is audited `Decision.BLOCKED` under the action it refused before the raise
+reaches the caller, never a partial result; a guardrail that raised instead of deciding is
+audited `BLOCKED` with `guardrail unavailable (<error>)` and its own error then reaches the
+caller (a 500 from the API). On a block the API answers 400, the CLI prints to stderr and exits
+1, and the agent tool returns `{"blocked": true, "reason": <str>}`.
+
+`DISPUTES_GUARDRAIL` switches the guardrail, read in the same three states as review routing:
+unset is on, `true`/`false` (or `on`/`off`) wins, and an emptied or unrecognised value refuses at
+boot. Off binds `DisabledGuardrail`, which allows everything unchanged, and logs one warning at
+startup. With the guardrail on and no Model Armor template configured, the managed profile
+REFUSES TO BOOT. Terraform states the switch as `guardrail_enabled`.
+
 ## Supply chain
 Installs come from the committed lockfiles. After changing a dependency run `make lock` and commit
 both files, then `make audit` (`pip-audit` over both locks). CI runs the same audit as a hard

@@ -32,7 +32,7 @@ leaving a UI half-wired.
 | **A5** Lazy cloud imports in cloud adapters `[all]` **(load-bearing)** | PASS | The `google.cloud` import lives inside `CloudAuditAdapter.record`. Proved by BLOCKING the import in a fresh interpreter (`tests/contract/_sdk_free_probe.py`), not by the SDK happening to be absent from the machine. |
 | **A6** Contract tests enforce the hexagon; port map cannot drift `[all]` **(load-bearing)** | PASS | `tests/contract/test_port_parity.py` asserts set equality across ALL FIVE homes of a port (Protocol map, `DEFAULT_BINDINGS`, `Container` accessor, settings file, canonical-call table), so an unregistered port cannot run untested; `tests/contract/test_behavioral_parity.py` proves the offline family answers, the on-premises family raises and the managed family refuses rather than silently succeeding; `tests/unit/test_settings_file.py` holds the two binding tables equal. |
 | **A7** Kernel vs vertical split in the domain `[all]` | PASS | `domain/kernel.py` (neutral) vs `domain/models.py` (this vertical); `models.py` imports `kernel`, never the reverse. |
-| **A8** Consume platform horizontals via thin delegates `[all]` | PARTIAL | `human-review-console` is consumed through `adapters/*/review_router.py` via the shared `review-kit`. Wire the remaining horizontals (guardrail, KB, observability, quality) as this vertical needs them; `COMPLIANCE.md` carries an explicit TODO row for each. |
+| **A8** Consume platform horizontals via thin delegates `[all]` | PARTIAL | `human-review-console` is consumed through `adapters/*/review_router.py` via the shared `review-kit`, and `agent-guardrail-gateway` through `ports/guardrail.py` (rule R1). Wire the remaining horizontals (KB, observability, quality) as this vertical needs them; `COMPLIANCE.md` carries an explicit TODO row for each. |
 | **B1** Consequential math is deterministic, pure, replayable `[agentic]` | PASS | `domain/triage_service.py` is pure stdlib and replayable; an LLM narrates only, and never produces the severity band. |
 | **B2** Every claim carries a citation; empty retrieval is a hard error `[agentic]` | PASS | Every `TriageResult` carries a `Citation`. Extend to a hard error on empty retrieval when a retrieval port is added. |
 | **B3** Maker-checker on every consequential output `[agentic]` | PASS | `requires_human_review` plus rule R8 routing through `ReviewRouterPort`, in the API request and the CLI; `tests/unit/test_review_routing.py` proves an escalation produces an outbound review and a non-escalation does not, on the API, CLI and agent paths alike. |
@@ -78,9 +78,9 @@ The remaining work list, in priority order:
   but the lifecycle clock days (`domain/workflows.py`), the jurisdiction selection
   (`domain/pii.py`) and the eval bars (`eval/run_eval.py`) are still module-level.
 - **A8 (PARTIAL)** wire the remaining horizontals as this vertical needs them. `human-review-console` (review and
-  case spine) and `complaints-review` are consumed through ports today; `agent-guardrail-gateway` (guardrail), `enterprise-knowledge-base` (knowledge base),
-  `agent-registry` (registry), `model-quality-gate` (promotion) and the `agent-observability` sink each carry an explicit row in
-  `COMPLIANCE.md`.
+  case spine), `complaints-review` and `agent-guardrail-gateway` (guardrail, rule R1) are consumed through ports
+  today; `enterprise-knowledge-base` (knowledge base), `agent-registry` (registry), `model-quality-gate`
+  (promotion) and the `agent-observability` sink each carry an explicit row in `COMPLIANCE.md`.
 - **D5 follow-up (not a GAP, but the row's stated caveat)** run the Terraform posture assertions
   from a gate: nothing in `make gate` or CI here invokes `terraform test`, so
   `infra/terraform/production_edge.tftest.hcl` guards nothing until it does.

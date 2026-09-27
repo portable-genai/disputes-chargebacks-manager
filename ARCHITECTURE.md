@@ -70,9 +70,11 @@ depends on a later job that may not exist.
 | `AuditSinkPort` | hash-chained SQLite WORM (commons) | Cloud Logging WORM (lazy) | placeholder |
 | `IdentityPort` | seeded personas (commons) | IAP assertion (lazy) | placeholder |
 | `ReviewRouterPort` | review-kit outbox (offline, inspectable) | `human-review-console` service intake over S2S | placeholder |
+| `GuardrailPort` | deterministic injection/jailbreak heuristic | regional Model Armor template, fail closed (lazy) | placeholder |
 
 The on-prem placeholders RAISE. A review router that silently returned would convert every
-consequential result into an unreviewed one, which is worse than a missing feature.
+consequential result into an unreviewed one, which is worse than a missing feature; a guardrail
+that silently allowed would let every generation call through unscreened (rule R1).
 
 A port is registered in FIVE places: `ports/__init__.py` (`PORT_PROTOCOLS`), `config.py`
 (`DEFAULT_BINDINGS` and a `Container` accessor), `config/settings.yaml` and
