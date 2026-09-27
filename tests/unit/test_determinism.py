@@ -41,6 +41,7 @@ def _service(narration: Any) -> DisputeService:
         review_router=container.review_router,
         case_engine=container.case_engine,
         narration=narration,
+        guardrail=container.guardrail,
         document_extraction=container.document_extraction,
         conversation_channel=container.conversation_channel,
         regulator_response=container.regulator_response,

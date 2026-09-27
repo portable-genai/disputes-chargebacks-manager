@@ -132,10 +132,28 @@ a digest-pinned non-root base image; SHA-pinned Actions; dependabot per ecosyste
 over both locks and `npm audit --audit-level=high` as hard failures.
 `tests/unit/test_repo_artifacts.py` asserts each of these from inside the offline gate.
 
+## Is untrusted text screened before it reaches the model?
+
+Yes (rule R1). `ports/guardrail.py` screens every generation call in both directions, wired in
+`domain/dispute_service.py`. `intake` screens the conversation reference and the redacted
+transcript INPUT before it is classified, and the label OUTPUT before it opens or fails closed.
+`draft_representment` screens the dispute id and each evidence document INPUT (an evidence
+document is untrusted customer text), then the prompt the narrator reads as sent, and the
+narrated draft OUTPUT before it is audited or returned. `regulator_response` screens the dispute
+id, the category and the redacted narrative INPUT, then the request complaints-review reads as
+sent, and the draft it returns OUTPUT. The joined screens catch an injection split across two
+fields, which each field's own screen passes. `local` is a
+deterministic heuristic stand-in for prompt-injection and jailbreak patterns; `gcp` calls a
+regional Model Armor template (`adapters/gcp/guardrail.py`, `infra/terraform/model_armor.tf`);
+`onprem` refuses rather than fail-opening. The Model Armor adapter allows only a complete, clean
+screen and calls with a deadline (`model_armor.timeout_seconds`). A block, or a guardrail that
+cannot decide, is audited `Decision.BLOCKED` before the refusal reaches the caller, never a
+partial result. `DISPUTES_GUARDRAIL` switches it, default on, and the
+managed profile refuses to boot with the guardrail on and no Model Armor template named.
+`tests/unit/test_guardrail_screening.py` is the standing gate.
+
 ## What is explicitly out of scope for this repo?
 
-- **Prompt-injection defence and output filtering** at the model boundary: `agent-guardrail-gateway`. There is no
-  `GuardrailPort` here yet, and an intake transcript is untrusted text (COMPLIANCE rule R1).
 - **The WORM audit store and the shared trace sink**: `agent-observability`. The tracer port exports OTLP to
   the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set, but the audit record itself does
   not yet land in the shared sink (rule R2).

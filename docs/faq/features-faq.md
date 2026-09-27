@@ -92,7 +92,7 @@ concerns owned by sibling systems, and a fork should not rebuild them. The hones
 | Tracing and the shared observability sink | `agent-observability` | Partly. Spans go OTLP to the `agent-observability` collector when `OTEL_EXPORTER_OTLP_ENDPOINT` is set; the audit record does not land in the shared sink yet (rule R2). |
 | AI-quality and promotion gate | `model-quality-gate` | Partly. `eval/run_eval.py --mode gate` is the client half; the metric bundle is not registered with `model-quality-gate` yet. |
 | Agent registry, versioning, entitlements | `agent-registry` | Partly. The A2A card is published; nothing registers it. |
-| Prompt-injection defence, output filtering | `agent-guardrail-gateway` | Not integrated. No `GuardrailPort` exists (rule R1). |
+| Prompt-injection defence, output filtering | `agent-guardrail-gateway` | Integrated. `ports/guardrail.py` screens every generation call's input and output (rule R1); `gcp` calls a regional Model Armor template. |
 | Governed retrieval with citations | `enterprise-knowledge-base` | Not integrated. No retrieval port and nothing grounded against a knowledge base. |
 | Downstream ops worklist and handover | **F5**, with the shared contract owned by **F1** | This repo CONFORMS to the export contract and adds a `signal` extension that `consumer-duty-monitoring` reads. |
 

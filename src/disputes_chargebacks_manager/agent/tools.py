@@ -23,6 +23,7 @@ from pii_kit import redact
 
 from ..adapters.controls import RecordingReviewRouter
 from ..config import Container, Settings, build_container, build_service
+from ..domain.errors import GuardrailBlockedError
 from ..domain.kernel import parse_date
 from ..domain.models import CustomerHistory, Dispute, DisputeTrack
 from ..domain.pii import PII_PATTERNS
@@ -170,12 +171,17 @@ def classify_intake(
     Returns:
       A JSON-safe result: the category, whether it opens a lifecycle case, and ``review_ref``
       (where an unclassifiable or regulatory intake was routed; empty unless routed), and
-      ``review_routing``: routed, failed, off or not_required.
+      ``review_routing``: routed, failed, off or not_required. When the guardrail blocks either
+      direction of the call (rule R1), the block is already audited and this returns
+      ``{"blocked": True, "reason": <str>}`` instead: never a partial classification.
     """
     container = _container(settings)
     routing = RecordingReviewRouter(container.review_router)
     service = build_service(container, routing=routing)
-    result = service.intake(conversation_ref, tenant=tenant, actor=actor)
+    try:
+        result = service.intake(conversation_ref, tenant=tenant, actor=actor)
+    except GuardrailBlockedError as exc:
+        return {"blocked": True, "reason": str(exc)}
     payload = _as_dict(result.classification)
     payload["opened"] = result.opened
     payload["review_ref"] = result.review_ref

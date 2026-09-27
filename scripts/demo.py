@@ -832,6 +832,10 @@ def _exit_audit(container: Any) -> Any:
     )
 
 
+def _exit_guardrail(container: Any) -> Any:
+    return container.guardrail.screen("please summarise the dispute status", kernel.Direction.INPUT)
+
+
 def _exit_review(container: Any) -> Any:
     citation = kernel.Citation(source_id="pack:card", title="Reason-code pack", snippet="10.4")
     return container.review_router.route(
@@ -900,6 +904,7 @@ def _exit_evaluation(container: Any) -> Any:
 #: the exposure guard reads before it stands down and lets the process bind every interface.
 EXIT_CALLS: dict[str, Callable[[Any], Any]] = {
     "audit": _exit_audit,
+    "guardrail": _exit_guardrail,
     "identity": _exit_identity,
     "review_router": _exit_review,
     "tracer": _exit_tracer,

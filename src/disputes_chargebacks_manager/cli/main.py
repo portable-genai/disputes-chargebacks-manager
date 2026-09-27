@@ -11,6 +11,7 @@ import sys
 
 from ..adapters.controls import RecordingReviewRouter
 from ..config import build_container, build_service
+from ..domain.errors import GuardrailBlockedError
 from ..domain.kernel import parse_date
 from ..domain.models import CustomerHistory, Dispute, DisputeTrack
 
@@ -92,7 +93,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
 
     if args.command == "intake":
-        result = service.intake(args.conversation_ref, tenant=args.tenant, actor=args.actor)
+        try:
+            result = service.intake(args.conversation_ref, tenant=args.tenant, actor=args.actor)
+        except GuardrailBlockedError as exc:
+            # Rule R1: already audited BLOCKED inside the service. Never a partial result.
+            print(f"blocked by guardrail: {exc}", file=sys.stderr)
+            return 1
         c = result.classification
         print(f"{args.conversation_ref}: {c.category.value} (opened={result.opened})")
         print(f"  human review hand-off : {routing.outcome.value} {result.review_ref}".rstrip())

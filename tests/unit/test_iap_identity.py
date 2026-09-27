@@ -419,6 +419,14 @@ _REBOUND_SETTINGS = "\n".join(
         "  audit:",
         *[f"    {p}: {_PKG}.adapters.local.audit:LocalAuditAdapter" for p in ("local", "gcp")],
         f"    onprem: {_PKG}.adapters.onprem.audit:OnPremAuditAdapter",
+        # The guardrail binds its local heuristic under gcp too, so a served request never
+        # reaches Model Armor: this suite exercises the IAP identity seam, not rule R1.
+        "  guardrail:",
+        *[
+            f"    {p}: {_PKG}.adapters.local.guardrail:LocalHeuristicGuardrailAdapter"
+            for p in ("local", "gcp")
+        ],
+        f"    onprem: {_PKG}.adapters.onprem.guardrail:OnPremGuardrailAdapter",
         "  identity:",
         f"    local: {_PKG}.adapters.local.identity:LocalIdentityAdapter",
         f"    gcp: {_PKG}.adapters.gcp.identity:IapIdentityAdapter",

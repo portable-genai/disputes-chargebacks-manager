@@ -61,6 +61,7 @@ google-api-core==2.39.0
     #   google-cloud-dialogflow-cx
     #   google-cloud-documentai
     #   google-cloud-logging
+    #   google-cloud-modelarmor
     #   google-cloud-resource-manager
     #   google-cloud-storage
 google-auth==2.58.1
@@ -74,6 +75,7 @@ google-auth==2.58.1
     #   google-cloud-dialogflow-cx
     #   google-cloud-documentai
     #   google-cloud-logging
+    #   google-cloud-modelarmor
     #   google-cloud-resource-manager
     #   google-cloud-storage
     #   google-genai
@@ -95,6 +97,8 @@ google-cloud-dialogflow-cx==2.7.0
 google-cloud-documentai==3.15.0
     # via disputes-chargebacks-manager (pyproject.toml)
 google-cloud-logging==3.16.3
+    # via disputes-chargebacks-manager (pyproject.toml)
+google-cloud-modelarmor==0.7.1
     # via disputes-chargebacks-manager (pyproject.toml)
 google-cloud-resource-manager==1.18.0
     # via google-cloud-aiplatform
@@ -127,6 +131,7 @@ grpcio==1.84.0
     #   google-cloud-dialogflow-cx
     #   google-cloud-documentai
     #   google-cloud-logging
+    #   google-cloud-modelarmor
     #   google-cloud-resource-manager
     #   googleapis-common-protos
     #   grpc-google-iam-v1
@@ -168,6 +173,7 @@ proto-plus==1.28.4
     #   google-cloud-dialogflow-cx
     #   google-cloud-documentai
     #   google-cloud-logging
+    #   google-cloud-modelarmor
     #   google-cloud-resource-manager
 protobuf==6.33.6
     # via
@@ -178,6 +184,7 @@ protobuf==6.33.6
     #   google-cloud-dialogflow-cx
     #   google-cloud-documentai
     #   google-cloud-logging
+    #   google-cloud-modelarmor
     #   google-cloud-resource-manager
     #   googleapis-common-protos
     #   grpc-google-iam-v1

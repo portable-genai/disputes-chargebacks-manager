@@ -29,6 +29,13 @@ model is a bounded, replaceable component that touches exactly two ports.
 - The intake transcript is redacted with `pii-kit` BEFORE it reaches the narration port:
   `DisputeService.intake` calls `redact(transcript, PII_PATTERNS)` on the way in and redacts the
   citation snippet it keeps.
+- Rule R1: `ports/guardrail.py` screens both directions of each generation call. `intake`
+  screens the conversation reference and the redacted transcript INPUT before it is classified
+  and the label OUTPUT before it opens or fails closed; `draft_representment` screens the
+  dispute id, each evidence document and the joined prompt INPUT before narration and the draft
+  OUTPUT before it is audited or returned; `regulator_response` screens what it hands
+  complaints-review INPUT and the draft that comes back OUTPUT. A block is audited
+  `Decision.BLOCKED` and raises `GuardrailBlockedError` rather than yielding a partial result.
 - The classifier's output is validated against the closed category list. `""` and any label
   outside `_INTAKE_CATEGORIES` are coerced to `IntakeCategory.UNKNOWN`, which routes to human
   review rather than opening a case. The model cannot invent a label that reaches the
@@ -73,9 +80,6 @@ RAISE, so a placeholder that quietly started returning something would fail the 
   and the dispute facts to `narrate` unredacted, and the extractor's raw line snippets travel on
   the `Citation` set into the audit record's citation list. Redact the fact tuple and the snippets
   before they cross either boundary, as the review payload converter already does.
-- **Prompt-injection screening** (rule R1). There is no `GuardrailPort` in `ports/`. An intake
-  transcript is untrusted text; screen it through the `agent-guardrail-gateway` before the model sees it, and
-  fail closed to deterministic-only when the screen is unavailable.
 - **Budget, rate and kill switch** (P-10, P-11): a per-tenant token budget, a request rate limit,
   and a switch that forces deterministic-only operation with the model disabled.
 - **Evaluate the live model** (P-08, rule R5). The offline eval scores the deterministic local

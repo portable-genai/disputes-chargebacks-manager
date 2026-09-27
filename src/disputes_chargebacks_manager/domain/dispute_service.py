@@ -6,6 +6,33 @@ the orchestrator redacts before the audit write and hands the disposition to the
 the SAME call that produced it (rule R8). The model's only jobs are behind the narration port:
 classify an intake into the closed set, and narrate a draft over facts the engine already fixed.
 
+Rule R1: the guardrail screens BOTH directions of EACH of the three generation calls this
+service makes (a fork that replaces a deterministic local stand-in with a real model call
+inherits this screening unchanged, because it wraps the STEP, not the string):
+
+- ``intake`` (``NarrationPort.classify``): INPUT screens the caller's conversation reference,
+  then the redacted transcript the classifier reads; OUTPUT screens the label before it opens a
+  case or fails closed.
+- ``draft_representment`` (``NarrationPort.narrate``): INPUT screens the dispute id and each
+  evidence document's id and text (each reaches the pack, the citations or the audit record by
+  itself), then the PROMPT the narrator receives, instruction and facts joined as sent; OUTPUT
+  screens the narrated draft before it is audited or returned.
+- ``regulator_response`` (``RegulatorResponsePort.draft_response``, a model in
+  complaints-review): INPUT screens the dispute id, the category and the redacted narrative,
+  then the three joined as sent; OUTPUT screens the returned draft before it is audited or
+  returned.
+
+The joined screens are not redundant: an injection split across two fields passes each field's
+screen, and only a screen of the text the model actually reads sees it whole. The text each
+screen hands back is the text used from then on, exactly as given. A prompt that crosses the
+port as structured fields cannot take a rewritten joined text back, so a joined screen that
+rewrote rather than allowed it unchanged refuses too.
+
+A blocked direction is audited ``Decision.BLOCKED`` and raises
+:class:`~.errors.GuardrailBlockedError`, never a partial result. A guardrail that cannot decide
+(its backend errored or timed out) fails CLOSED the same way: the refusal is audited BLOCKED
+when the audit sink can take it, and the guardrail's own error then reaches the caller.
+
 The orchestrator takes its ports by constructor injection (the container supplies the bound
 adapter family) and builds the deterministic engines from the settings-loaded policy, so a test
 drives it with in-memory settings and the real local adapters.
@@ -13,7 +40,7 @@ drives it with in-memory settings and the real local adapters.
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date
 
 from pii_kit import redact
@@ -22,13 +49,15 @@ from ..ports.audit import AuditSinkPort
 from ..ports.case_engine import CaseEnginePort
 from ..ports.conversation_channel import ConversationChannelPort
 from ..ports.document_extraction import DocumentExtractionPort
+from ..ports.guardrail import GuardrailPort
 from ..ports.narration import NarrationPort
 from ..ports.observability import ObservabilityTracerPort
 from ..ports.regulator_response import RegulatorResponsePort
 from ..ports.review_router import ReviewRouterPort
 from .abuse_engine import AbuseEngine, AbusePolicy
 from .eligibility_engine import EligibilityEngine, ReasonCodePack
-from .kernel import AuditEvent, Citation, Decision, Severity, utcnow
+from .errors import GuardrailBlockedError
+from .kernel import AuditEvent, Citation, Decision, Direction, GuardrailVerdict, Severity, utcnow
 from .models import (
     AbuseAssessment,
     AbuseOutcome,
@@ -58,6 +87,27 @@ _INTAKE_CATEGORIES: tuple[str, ...] = tuple(
     c.value for c in IntakeCategory if c is not IntakeCategory.UNKNOWN
 )
 
+#: The instruction the representment narrator receives, ahead of the facts.
+_REPRESENTMENT_INSTRUCTION = (
+    "[DRAFT representment, requires review] Contest the chargeback for the merchant, "
+    "citing only the recorded evidence."
+)
+
+
+def representment_prompt(instruction: str, facts: tuple[tuple[str, str], ...]) -> str:
+    """The prompt the narrator receives: the instruction, a blank line, one ``key: value`` a line.
+
+    ``NarrationPort.narrate`` takes the two parts structured; this is the text a model reads,
+    and so the text the INPUT screen has to have seen whole.
+    """
+    return instruction + "\n\n" + "\n".join(f"{key}: {value}" for key, value in facts)
+
+
+def regulator_prompt(dispute_id: str, category: str, narrative: str) -> str:
+    """What the regulator-response module is handed: the three fields, joined as sent."""
+    return f"{dispute_id}\n\n{category}\n\n{narrative}"
+
+
 #: One span per opened dispute. Structural attributes only: see :meth:`DisputeService.open_dispute`.
 _OPEN_DISPUTE_SPAN = "disputes.open_dispute"
 
@@ -74,6 +124,15 @@ def _redacted(citations: tuple[Citation, ...]) -> tuple[Citation, ...]:
         Citation(source_id=c.source_id, title=c.title, snippet=redact(c.snippet, PII_PATTERNS))
         for c in citations
     )
+
+
+@dataclass(frozen=True, slots=True)
+class _Screening:
+    """What a guardrail refusal inside one action is recorded as: the action, who, and its band."""
+
+    action: str
+    actor: str
+    severity: Severity
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +174,7 @@ class DisputeService:
         review_router: ReviewRouterPort,
         case_engine: CaseEnginePort,
         narration: NarrationPort,
+        guardrail: GuardrailPort,
         document_extraction: DocumentExtractionPort,
         conversation_channel: ConversationChannelPort,
         regulator_response: RegulatorResponsePort,
@@ -126,6 +186,7 @@ class DisputeService:
         self._review = review_router
         self._case_engine = case_engine
         self._narration = narration
+        self._guardrail = guardrail
         self._extractor = document_extraction
         self._channel = conversation_channel
         self._regulator = regulator_response
@@ -157,6 +218,64 @@ class DisputeService:
 
     def _route(self, disposition: DisputeDisposition, *, maker: str, tenant: str) -> str:
         return self._review.route(disposition, maker=maker, tenant=tenant)
+
+    def _screen(
+        self,
+        text: str,
+        direction: Direction,
+        ctx: _Screening,
+        *,
+        subject: str | None = None,
+    ) -> str:
+        """Screen one text in one direction; return the text to use from here on, or refuse.
+
+        The returned text is the verdict's ``sanitized_text`` exactly as given, including an
+        empty string: a screen that redacted everything has not asked for the original back.
+        A block, and a guardrail that raised instead of deciding, both fail closed after an
+        audited BLOCKED record. ``subject`` is what the record may name, and is ``None`` until
+        the subject has itself passed the INPUT screen.
+        """
+        try:
+            verdict: GuardrailVerdict = self._guardrail.screen(text, direction)
+        except Exception as exc:
+            reason = f"guardrail unavailable ({type(exc).__name__})"
+            try:
+                self._audit_blocked(ctx, direction, reason, subject=subject)
+            except Exception as audit_exc:
+                exc.add_note(f"the BLOCKED audit record could not be written: {audit_exc!r}")
+            raise
+        if not verdict.allowed or verdict.sanitized_text is None:
+            reason = verdict.reason or f"{ctx.action} {direction.value} blocked by guardrail"
+            self._audit_blocked(ctx, direction, reason, subject=subject)
+            raise GuardrailBlockedError(reason)
+        return verdict.sanitized_text
+
+    def _screen_as_sent(self, prompt: str, ctx: _Screening, *, subject: str) -> None:
+        """Screen a joined INPUT prompt that crosses its port as structured fields.
+
+        The port takes the parts, not this string, so a rewritten prompt has nowhere to go:
+        anything but an unchanged allow refuses, audited like any other block.
+        """
+        screened = self._screen(prompt, Direction.INPUT, ctx, subject=subject)
+        if screened != prompt:
+            reason = "guardrail rewrote a structured prompt, which cannot be applied as sent"
+            self._audit_blocked(ctx, Direction.INPUT, reason, subject=subject)
+            raise GuardrailBlockedError(reason)
+
+    def _audit_blocked(
+        self, ctx: _Screening, direction: Direction, reason: str, *, subject: str | None
+    ) -> None:
+        """Audit a guardrail refusal BEFORE the raise reaches the caller (rule R1/R2).
+
+        Never carries the refused text: only that a refusal happened, in which direction, and
+        why, plus the subject once it has itself passed the INPUT screen. ``ctx.severity`` is the
+        action's standing band (every action here records a fixed one; none is scored from the
+        refused text). A refused attempt is a security-relevant event the WORM trail must hold
+        even though the request as a whole never produced a result.
+        """
+        what = f"{subject}: blocked" if subject is not None else "blocked"
+        summary = f"{what} ({direction.value}): {reason}"
+        self._record(ctx.action, ctx.actor, Decision.BLOCKED, ctx.severity, summary, ())
 
     # -- open / eligibility ---------------------------------------------- #
     def open_dispute(self, dispute: Dispute, *, actor: str, as_of: date) -> OpenDisputeResult:
@@ -257,18 +376,33 @@ class DisputeService:
         complaint also routes to review (it is handled by the regulator-response module, not a
         card/retail lifecycle). Only a clean card/retail category "opens" (is eligible to open).
         """
+        guard = _Screening("intake", actor, Severity.MEDIUM)
+        # Rule R1, INPUT: the caller's reference reaches the citation, the summary, the review
+        # disposition and the audit record by itself, so it is screened before anything uses it;
+        # then the redacted transcript, which is the whole of what the classifier reads.
+        conversation_ref = self._screen(conversation_ref, Direction.INPUT, guard)
         turns = self._channel.fetch_turns(conversation_ref)
-        transcript = " ".join(t.text for t in turns)
-        raw_label = self._narration.classify(
-            redact(transcript, PII_PATTERNS), categories=_INTAKE_CATEGORIES
+        transcript = self._screen(
+            redact(" ".join(t.text for t in turns), PII_PATTERNS),
+            Direction.INPUT,
+            guard,
+            subject=conversation_ref,
         )
+
+        raw_label = self._narration.classify(transcript, categories=_INTAKE_CATEGORIES)
+
+        # Rule R1, OUTPUT: the label, before it opens a case or fails closed. An empty answer
+        # carries no text to screen, and fails closed to review below like any unknown label.
+        if raw_label:
+            raw_label = self._screen(raw_label, Direction.OUTPUT, guard, subject=conversation_ref)
+
         category = (
             IntakeCategory(raw_label) if raw_label in _INTAKE_CATEGORIES else IntakeCategory.UNKNOWN
         )
         citation = Citation(
             source_id=f"intake:{conversation_ref}",
             title="Intake transcript",
-            snippet=redact(transcript[:80], PII_PATTERNS),
+            snippet=transcript[:80],
         )
 
         opens = category not in (IntakeCategory.UNKNOWN, IntakeCategory.COMPLAINT_REGULATORY)
@@ -319,30 +453,42 @@ class DisputeService:
         exactly as :meth:`regulator_response` redacts the narrative before delegating. Doing it
         at the sinks instead would mean getting it right three times.
         """
+        guard = _Screening("draft_representment", actor, Severity.HIGH)
+        # Rule R1, INPUT: every caller field that reaches a sink on its own is screened on its
+        # own: the dispute id (the pack, the summary, the audit record) and each evidence
+        # document's id and text (its citations and extracted facts). The reason code and the
+        # currency reach only the prompt, which is screened whole below.
+        subject = self._screen(dispute.id, Direction.INPUT, guard)
         extracted: list[ExtractedEvidence] = []
         facts: list[tuple[str, str]] = [
-            ("dispute_id", dispute.id),
+            ("dispute_id", subject),
             ("reason_code", dispute.reason_code),
             ("amount_minor", str(dispute.amount_minor)),
             ("currency", dispute.currency),
         ]
         citations: list[Citation] = []
         for document_id, raw_text in evidence:
+            doc_id = self._screen(document_id, Direction.INPUT, guard, subject=subject)
+            text = self._screen(raw_text, Direction.INPUT, guard, subject=subject)
             doc = self._extractor.extract_raw(
-                raw_text, doc_type="chargeback_evidence", document_id=document_id
+                text, doc_type="chargeback_evidence", document_id=doc_id
             )
             extracted.append(doc)
             citations.extend(_redacted(doc.citations))
             facts.extend((key, redact(value, PII_PATTERNS)) for key, value in doc.fields)
 
-        draft_body = self._narration.narrate(
-            instruction=(
-                "[DRAFT representment, requires review] Contest the chargeback for the merchant, "
-                "citing only the recorded evidence."
-            ),
-            facts=tuple(facts),
+        # The prompt the narrator reads, screened AS SENT, after its parts.
+        self._screen_as_sent(
+            representment_prompt(_REPRESENTMENT_INSTRUCTION, tuple(facts)), guard, subject=subject
         )
-        summary = f"{dispute.id}: representment draft over {len(extracted)} evidence document(s)"
+        narrated = self._narration.narrate(
+            instruction=_REPRESENTMENT_INSTRUCTION, facts=tuple(facts)
+        )
+
+        # Rule R1, OUTPUT: the narrated draft, before it is audited or returned.
+        draft_body = self._screen(narrated, Direction.OUTPUT, guard, subject=subject)
+
+        summary = f"{subject}: representment draft over {len(extracted)} evidence document(s)"
         self._record(
             "draft_representment",
             actor,
@@ -352,7 +498,7 @@ class DisputeService:
             tuple(citations),
         )
         return RepresentmentPack(
-            dispute_id=dispute.id,
+            dispute_id=subject,
             draft_text=draft_body,
             requires_human_review=True,
             citations=tuple(citations),
@@ -361,15 +507,30 @@ class DisputeService:
     # -- regulator response (complaints-review) --------------------------------------- #
     def regulator_response(self, dispute: Dispute, *, actor: str) -> RegulatorDraft:
         """Delegate regulator-response drafting to the complaints-review module with a redacted
-        narrative.
+        narrative, screened in both directions (rule R1).
+
+        complaints-review drafts the response with its own model, so this is a generation call
+        like the two narration ones: every field it is handed is screened INPUT on its own and
+        then joined as sent, and the draft that comes back is screened OUTPUT before it is
+        audited or returned.
         """
-        redacted = redact(dispute.narrative, PII_PATTERNS)
-        draft = self._regulator.draft_response(
-            dispute_id=dispute.id,
-            category=dispute.reason_code or "complaint",
-            redacted_narrative=redacted,
+        guard = _Screening("regulator_response", actor, Severity.HIGH)
+        subject = self._screen(dispute.id, Direction.INPUT, guard)
+        category = self._screen(
+            dispute.reason_code or "complaint", Direction.INPUT, guard, subject=subject
         )
-        summary = f"{dispute.id}: regulator-response draft via complaints-review module"
+        narrative = self._screen(
+            redact(dispute.narrative, PII_PATTERNS), Direction.INPUT, guard, subject=subject
+        )
+        self._screen_as_sent(regulator_prompt(subject, category, narrative), guard, subject=subject)
+        draft = self._regulator.draft_response(
+            dispute_id=subject, category=category, redacted_narrative=narrative
+        )
+        draft = replace(
+            draft,
+            draft_text=self._screen(draft.draft_text, Direction.OUTPUT, guard, subject=subject),
+        )
+        summary = f"{subject}: regulator-response draft via complaints-review module"
         self._record(
             "regulator_response", actor, Decision.ESCALATED, Severity.HIGH, summary, draft.citations
         )

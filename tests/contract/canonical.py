@@ -31,6 +31,8 @@ from disputes_chargebacks_manager.domain.kernel import (
     AuditEvent,
     Citation,
     Decision,
+    Direction,
+    GuardrailVerdict,
     Severity,
 )
 from disputes_chargebacks_manager.domain.models import (
@@ -134,6 +136,14 @@ def _regulator_answered(_adapter: Any, result: Any) -> bool:
     return bool(getattr(result, "draft_text", "")) and result.requires_human_review
 
 
+def _guardrail_invoke(adapter: Any) -> Any:
+    return adapter.screen("a routine, benign request", Direction.INPUT)
+
+
+def _guardrail_answered(_adapter: Any, result: Any) -> bool:
+    return isinstance(result, GuardrailVerdict) and result.allowed
+
+
 def _narration_invoke(adapter: Any) -> Any:
     return adapter.narrate(instruction="Summarise the case.", facts=(("reason_code", "10.4"),))
 
@@ -167,6 +177,13 @@ CANONICAL_CALLS: dict[str, PortCase] = {
         # The lazy `google.cloud` import is the first thing the managed sink does.
         managed_refusal=(ImportError,),
         detail="write one already-redacted WORM record",
+    ),
+    "guardrail": PortCase(
+        invoke=_guardrail_invoke,
+        answered=_guardrail_answered,
+        # The lazy `google.cloud` import is the first thing the managed adapter's screen() does.
+        managed_refusal=(ImportError,),
+        detail="screen one direction of a generation call",
     ),
     "identity": PortCase(
         invoke=_identity_invoke,

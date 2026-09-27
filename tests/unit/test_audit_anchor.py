@@ -117,6 +117,7 @@ def test_an_append_after_truncation_cannot_relaunder_the_anchor(tmp_path: Path) 
             review_router=container.review_router,
             case_engine=container.case_engine,
             narration=container.narration,
+            guardrail=container.guardrail,
             document_extraction=container.document_extraction,
             conversation_channel=container.conversation_channel,
             regulator_response=container.regulator_response,

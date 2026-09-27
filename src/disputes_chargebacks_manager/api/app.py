@@ -79,6 +79,7 @@ from ..config import (
     end_user_auth_kind,
     resolve_profile,
 )
+from ..domain.errors import GuardrailBlockedError
 from ..domain.kernel import parse_date
 
 # Resolved at import, so an unknown, mis-capitalised or deliberately emptied profile is a BOOT
@@ -361,15 +362,23 @@ def intake(
     request: IntakeRequest,
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> IntakeResponse:
-    """Classify an intake into the closed set; unclassifiable or regulatory fails closed to R8."""
+    """Classify an intake into the closed set; unclassifiable or regulatory fails closed to R8.
+
+    Rule R1: the guardrail screens the conversation reference and the transcript, then the
+    classification label (``domain/dispute_service.py``). A blocked direction is already
+    audited BLOCKED inside the service and answers 400 here, never a partial classification.
+    """
     container = _container()
     # The hand-off never fails an already-decided, already-audited outcome; the response says
     # what happened to it instead (the fleet's runtime-control contract).
     routing = RecordingReviewRouter(container.review_router)
     service = build_service(container, routing=routing)
-    result = service.intake(
-        request.conversation_ref, tenant=principal.tenant, actor=principal.actor
-    )
+    try:
+        result = service.intake(
+            request.conversation_ref, tenant=principal.tenant, actor=principal.actor
+        )
+    except GuardrailBlockedError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     c = result.classification
     return IntakeResponse(
         conversation_ref=c.conversation_ref,
@@ -392,11 +401,20 @@ def representment(
     request: RepresentmentRequest,
     principal: Annotated[Principal, Depends(get_principal)],
 ) -> RepresentmentResponse:
-    """Draft a representment pack over parsed evidence and engine facts (always review-gated)."""
+    """Draft a representment pack over parsed evidence and engine facts (always review-gated).
+
+    Rule R1: the guardrail screens the dispute id, each evidence document and the prompt the
+    narrator reads, then the narrated draft (``domain/dispute_service.py``). A blocked
+    direction is already audited BLOCKED inside the service and answers 400 here, never a
+    partial draft.
+    """
     service = build_service(_container())
     dispute = request.dispute.to_domain(tenant=principal.tenant)
     evidence = tuple((e.document_id, e.text) for e in request.evidence)
-    pack = service.draft_representment(dispute, evidence, actor=principal.actor)
+    try:
+        pack = service.draft_representment(dispute, evidence, actor=principal.actor)
+    except GuardrailBlockedError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return RepresentmentResponse.from_domain(pack)
 
 
@@ -407,10 +425,17 @@ def regulator(
 ) -> RegulatorResponseModel:
     """Delegate a regulator response to the complaints-review module with a redacted narrative
     (review-gated).
+
+    Rule R1: the guardrail screens the fields handed to complaints-review and the draft it
+    returns (``domain/dispute_service.py``). A blocked direction is already audited BLOCKED
+    inside the service and answers 400 here, never a partial draft.
     """
     service = build_service(_container())
     dispute = request.dispute.to_domain(tenant=principal.tenant)
-    draft = service.regulator_response(dispute, actor=principal.actor)
+    try:
+        draft = service.regulator_response(dispute, actor=principal.actor)
+    except GuardrailBlockedError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
     return RegulatorResponseModel.from_domain(draft)
 
 
